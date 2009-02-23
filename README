@@ -1,0 +1,6 @@
+Middler_Firewall - Layer-4 Switching code. Only responsible for redirection and arp spoofing (ok, not as yet).
+middler.py - core file
+    SocketServer listener on ports...
+    Proxy HTTP
+
+Components, interactions, and responsibilities
