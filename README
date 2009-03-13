@@ -1,6 +1,68 @@
-Middler_Firewall - Layer-4 Switching code. Only responsible for redirection and arp spoofing (ok, not as yet).
-middler.py - core file
-    SocketServer listener on ports...
-    Proxy HTTP
+== Introduction == 
 
-Components, interactions, and responsibilities
+The Middler is a Man in the Middle tool to demonstrate protocol middling
+attacks. Led by Jay Beale, the project involves a team of authors including
+InGuardians agents Justin Searle and Matt Carpenter.  The Middler is intended to
+man in the middle, or "middle" for short, every protocol for which we can create
+code.
+
+In our first alpha release, we released a core built by Matt and Jay, with
+introductory plug-ins by Justin and InGuardians agent Tom Liston. It runs on
+Linux and Mac OS X, with most of the code functional on Windows and BSD Unix.
+
+The current codebase is in the alpha state, but a beta release is coming soon,
+with better documentation (see the wiki), easier installation, and even more
+plug-ins, at least if Justin has his way!
+
+
+== Plug-Ins ==
+
+Justin and Tom's first plug-ins were very cool:
+
+    * plugin-beef.py - inject the Browser Exploitation Framework (BeEF) into any
+      HTTP requests originating on the local LAN
+
+    * plugin-metasploit.py - inject an IFRAME into cleartext (HTTP) requests
+      that loads Metasploit browser exploits
+
+    * plugin-keylogger.py - inject a JavaScript? onKeyPress event handler to
+      cleartext forms that get submitted via HTTPS, forcing the browser to send
+      the password character-by-character to the attacker's server, before the
+      form is submitted.
+
+Justin has refinements to these on the way, as well as a batch of so-far
+unreleased modules.
+
+The author team has done a tremendous amount of research, design and pseudo-code
+work, fleshing out attacks on web-based e-mail systems and social networking
+sites. We'll be standing up an external Wiki soon to share more of these ideas,
+but you can get early details from our slides from Jay and Justin's talks at Def
+Con and ShmooCon.
+
+== Dependencies: ==
+
+The Middler depends on the following Python modules:
+
+    * scapy
+    * libpcap
+    * readline
+    * libdnet
+    * beautifulsoup
+
+Please see the wiki for platform-specific installation instructions.
+
+== People: ==
+
+Justin Searle - Co-Author
+Matt Carpenter - Co-Author
+Tom Liston - Emeritus Co-author
+Brandon Edwards - Co-Author, focus on Installation
+Jay Beale - Co-Author and Project Lead
+
+
+=== Special Pre-Announcement: ===
+
+Co-author Justin Searle will begin teaching Middling for Penetration Testers
+class this summer, where he'll teach people how to both use and add onto the
+Middler and other MitM tools. It promises to be very, very useful.
+
