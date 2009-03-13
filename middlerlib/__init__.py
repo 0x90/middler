@@ -15,7 +15,7 @@ from JLog import *
 import os, signal, socket, SocketServer, select, sys, Cookie
 import re, urllib
 import threading, thread
-#from scapy import *
+from scapy import *
 
 #### Globals
 
