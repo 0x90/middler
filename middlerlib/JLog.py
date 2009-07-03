@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# This file is entirely dedicated to providing thread-safe logging capability to the program.
+
 # JLog!
 
 import thread

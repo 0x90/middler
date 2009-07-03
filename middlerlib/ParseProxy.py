@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
-# Parse the request and response!
+
+# This code is currently unused in Middler.
+
+# It was the beginning of some special treatment for the user agent line in the HTTP request's header.
+# This will be more useful in the future, particularly for applying different behavior or exploits for
+# different browsers.
 
 #module ParseProxy:
 
@@ -15,8 +20,6 @@ def parse_useragent(user_agent):
     # Now parse out the specific browser
     firefox_pat=re.compile(r".*Firefox/(\d+\.\d+\.\d+).*")
     iphone_safari_pat=re.compile(r"Mozilla/(\d+\.\d+) \(iPhone; U; CPU iPhone OS (\d+_\d+) like Mac OS X\;\s*\w+-\w+.*\) AppleWebKit/([\d\.]+)  \(KHTML, like Gecko\) Version/([\d\.]+) Mobile/(\w+) Safari/([\d\.]+)")
-
-    # TODO: grab browser user agent strings from InGuardians.com web server...
 
     if firefox_pat.match(user_agent):
       # Example of catching Firefox in use:

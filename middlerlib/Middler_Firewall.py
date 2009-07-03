@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
+# This file contains the functions that make the current system intercept traffic.
+
 #######################
 # Variable definitions
 #######################
+
+# Fix the operating_system variable to "nyd" for "not yet determined."
 
 operating_system = "nyd"
 
@@ -58,7 +62,7 @@ def redirectIPTablesStart():
   os.system("iptables -t nat -N MIDDLERNAT")
   os.system("iptables -t nat -A PREROUTING -j MIDDLERNAT")
   os.system("iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports 8080")
-  
+
 def redirectIPTablesStop():
 
   # TODO-Medium: write a routine to find the jump to the MIDDLERNAT rule first, so we can entirely remove
@@ -96,7 +100,7 @@ def startRedirection():
     elif uname_operating_system[0:5] == r"CYGWIN":
       operating_system - "Windows"
       print "ERROR: routing and network redirection code does not yet run on Windows"
-      
+
 
   except:
     exit

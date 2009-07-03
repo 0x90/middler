@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 
-# vBeta - 200802070545
+# Version 20090703
 
 #import middler
-# Copyright 2008 Jay Beale
+# Copyright 2009 Jay Beale
 # Licensed under GPL v2
 
 from JLog import *
-#### FIXME UNCOMMENT THIS
-#from Middler_Firewall import startRedirection,stopRedirection
 
-#from ParseProxy import parse_useragent
+# Start intercepting traffic.
+from Middler_Firewall import startRedirection,stopRedirection
 
 import os, signal, socket, SocketServer, select, sys, Cookie
 import re, urllib
@@ -21,6 +20,7 @@ from scapy import *
 
 keep_gzip_in_requests = 0
 port = 0
+
 # Process ID's for any processes we fork
 child_pids_to_shutdown = []
 toggle_arpspoof = False
@@ -28,11 +28,11 @@ toggle_arpspoof = False
 ####################################################################################################
 # Network interface code
 ####################################################################################################
-    
+
 def find_my_default_router_and_interface():
     """Use netstat -rn to figure out what the operating system's default router is and what
     its Internet interface is."""
-    
+
     (stdin,stdout) = os.popen2("netstat -rn","r",100)
     for line in stdout:
         # BSD and OS X
@@ -486,7 +486,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
   # with notification as to whether the plugin changed anything and if the
   # plugin requires that no other plugin receive a chance to make changes
   # before we hand the data back to the user.
-  
+
   def doRequest(self, session, request_headers, data):
     global PLUGINS
     for plugin in PLUGINS:
@@ -555,7 +555,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       # Store variables about things we want to modify:
       #
 
-      
+
       inject_status_code = 0  # var: inject_status_code - should we inject a new status code on next request?
 
       # Status code message we'd like to inject, like:
@@ -739,7 +739,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       # Open a connection to the desired server and send request
 
-      
+
       # If we need to do this over ssl, use the urlopen library.
       if need_to_do_this_over_ssl:
         debug_log("Connecting HTTPS to %s\n" % desthostname)
@@ -921,7 +921,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 # We should consider pulling one line at a time from the socket or something like using xreadlines or something like that...
 
       self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
-      
+
       #  GREAT! Now let's build our reply.  TODO-med: Make SSL changes happen pre-this?
       modified_response_temp = [ response_headers[0][1] ]
       for header_idx in xrange(1,len(response_headers)):

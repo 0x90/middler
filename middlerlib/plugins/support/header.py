@@ -1,3 +1,5 @@
+# This file contains API helper routnes for checking and changing HTTP headers.
+
 headertest_stdmatch = (("Content-type","text/html"),)
 
 def headertest(header, match = headertest_stdmatch):
