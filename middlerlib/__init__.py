@@ -260,8 +260,10 @@ PLUGINS = []
 if (not PLUGINS or len(PLUGINS) == 0):
 
     ###### This code loads the fileparsers into the PLUGINS list
-    parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
+    parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep)
+#    parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
     print >>sys.stderr,(">>plugindir: %s<<"%parserdir)
+
     filename = None
     for filename in  os.listdir(parserdir):
         try:
@@ -269,7 +271,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
 	    # start with _ to our list of plugins.
 
             if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
-		
+#		print >>sys.stderr,(">>Trying to load plugin from middlerlib.plugins.enabled.%s"%filename[:-3] )
                 PLUGINS.append(__import__("middlerlib.plugins.%s"%filename[:-3], None, None, "middlerlib.plugins"))
         except:
             print >>sys.stderr,("Error loading plugin %s"%filename)
@@ -285,7 +287,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
     ###### This code loads the fileparsers into the PLUGINS list
     #print os.path.abspath(os.curdir)
     parserdir = "./plugins"
-    print >>sys.stderr,(">>plugindir: %s<<"%parserdir)
+    print >>sys.stderr,(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
     filename = None
     try:
       for filename in  os.listdir(parserdir):
