@@ -19,7 +19,7 @@ def parseCommandLineFlags():
                   action="store_false", dest="sslstrip", default=False,
                   help="change HTTPS links to HTTP, while sending data to the server over HTTPS")
   parser.add_option("-u", "--url", dest="url",
-                  help="URL to inject", dest="url",default="")
+                  help="URL to inject", default="")
   parser.add_option("-a", "--autopwn", dest="autopwn",
                   help="auto-p0wn browsers via Metasploit")
   parser.add_option("-r", "--redirect_via_arpspoof", dest="toggle_arpspoof",

@@ -260,13 +260,16 @@ PLUGINS = []
 if (not PLUGINS or len(PLUGINS) == 0):
 
     ###### This code loads the fileparsers into the PLUGINS list
-    #print os.path.abspath(os.curdir)
-    parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep)
+    parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
     print >>sys.stderr,(">>plugindir: %s<<"%parserdir)
     filename = None
     for filename in  os.listdir(parserdir):
         try:
+	    # Add any file in the active plugins directory that ends in .py and doesn't 
+	    # start with _ to our list of plugins.
+
             if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
+		
                 PLUGINS.append(__import__("middlerlib.plugins.%s"%filename[:-3], None, None, "middlerlib.plugins"))
         except:
             print >>sys.stderr,("Error loading plugin %s"%filename)
