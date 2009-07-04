@@ -7,7 +7,7 @@ import sys
 import os
 
 # We need to log
-from JLog import *
+from middlerlib.JLog import *
 
 #######################
 # Variable definitions
