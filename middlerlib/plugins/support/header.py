@@ -1,5 +1,7 @@
 # This file contains API helper routnes for checking and changing HTTP headers.
 
+from JLog import *
+
 headertest_stdmatch = (("Content-type","text/html"),)
 
 def headertest(header, match = headertest_stdmatch):
@@ -14,7 +16,7 @@ def headertest(header, match = headertest_stdmatch):
 		return False
 
 def headerfix(header, key, value):
-	developer_log("In headerfix() changing key %s to value %s" % key,value)
+	debug_log("In headerfix() changing key %s to value %s" % key,value)
 	debug_log("Header before fixing %s line is %s" % key,header)
 	for current in range(len(header)):
 		if(header[current][0].lower().find(key.lower()) > -1):

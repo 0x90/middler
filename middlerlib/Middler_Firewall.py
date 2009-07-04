@@ -105,7 +105,7 @@ def startRedirection():
     
     # Activate packet forwarding via proc
     os.system(r"echo 1 >/proc/sys/net/ipv4/ip_forward")
-    developer_log("On Linux - just set /proc/sys/net/ipv4/ip_forward to 1.")
+    debug_log("On Linux - just set /proc/sys/net/ipv4/ip_forward to 1.")
 
     redirectIPTablesStart()
     
@@ -118,7 +118,7 @@ def startRedirection():
 
 def stopRedirection():
   
-  developer_log("Entered stopRedirection()")
+  debug_log("Entered stopRedirection()")
  
   if sys.platform == "darwin":
     

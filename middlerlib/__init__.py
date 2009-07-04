@@ -606,6 +606,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       line = self.rfile.readline()
       sys.stdout.write(line)
+      sys.stdout.write(r"\r\n")
       request_headers = [ ("Request",line) ]
 
       while True:
@@ -812,6 +813,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         diff = 2
       cutoff = response.find(rets*2)
 
+      debug_log("\nResponse HTTP handling:  cutoff is set to %d\n" % cutoff)
+
       #print repr(response[:cutoff])
 
       if cutoff == -1:
@@ -819,10 +822,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         print "Error reading from server...  No separator found between headers and body of response"
 
       # pick off the data variable, since we're about to loop through response_headers
+      debug_log("\nResponse HTTP pre-cutoff string is %s\n\n" % response[:cutoff+diff])
       response_data = response[cutoff+diff:]
 
+      # You know code will be tough to debug when variables are called foo_temp1 and foo_temp.
       response_header_temp1 = response[:cutoff]
       print response_header_temp1
+      debug_log("\nResponse_header_temp1 is %s\n" % response_header_temp1)
       response_header_temp  = response_header_temp1.split(rets)
 
       if IR.inject_redirect(desthostname) == 1:
@@ -832,6 +838,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       else:
         response_headers = [ ( "Response", response_header_temp[0]) ]
 
+      response_line_debug = str(response_headers[0])
+      debug_log("\nResponse headers - response is %s\n" % response_line_debug )
+      print("\nResponse headers - response is")
+      print(response_line_debug)
+      print("\n")
+      sys.stdout.flush()
+      
       #print repr(response_header_temp)
       response_code, response_message = response_header_temp[0].split(" ",1)    # do we want the "real" one?
       #print repr(response_code+" "+ response_message)
@@ -925,15 +938,23 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       print response_headers
 # We should consider pulling one line at a time from the socket or something like using xreadlines or something like that...
 
+      debug_log("\nbefore plugin, response headers are %s\n\n" % response_headers)
       self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
+      debug_log("after plugins, response headers are %s\n\n" % response_headers )
 
-      #  GREAT! Now let's build our reply.  TODO-med: Make SSL changes happen pre-this?
-      modified_response_temp = [ response_headers[0][1] ]
+      #  GREAT! Now let's build our reply.  TODO-med: Make SSL changes happen prior to this.
+      # Caught the bug!!!!
+      #
+      # modified_response_temp was built without adding the rets to the first line!!!!
+ 
+      response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
+      modified_response_temp = [ response_code_line ]
+
       for header_idx in xrange(1,len(response_headers)):
-        modified_response_temp.append("%s: %s%s"%(response_headers[header_idx][0],response_headers[header_idx][1], rets))
+        modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
       modified_response_temp.append(rets)   #rets is the *identified* bytes used as CRLF
       modified_response_temp.append(response_data)
-      #print repr(modified_response_temp)
+      print repr(modified_response_temp)
       modified_response = "".join(modified_response_temp)
 
       # If we're removing ssl, do this to the entire modified_response at once, so
