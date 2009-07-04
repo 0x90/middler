@@ -1074,8 +1074,7 @@ class InjectRedirect:
   ###initialize_logging()
 
   #### Start up the firewalling and routing to  send traffic to us.
-  ####### FIXME UNCOMMENT THIS
-  ####startRedirection()
+  # startRedirection()
 
   #### Activate the DNS spoofing?
   ####os.spawnl(os.P_NOWAIT,r"/Users/jay/BFF_DNS.pl","")

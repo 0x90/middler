@@ -85,7 +85,8 @@ if __name__ == '__main__':
 
 
     # Turn off the firewalling/routing
-    ml.stopRedirection()
+    ml.debug_log("Deactivating routing/firewall-based packet fu.")
+    ml.Middler_Firewall.stopRedirection()
 
     # Close up the log files.
     ml.debug_log("Closing log files.\n")
@@ -102,8 +103,8 @@ if __name__ == '__main__':
   ml.initialize_logging()
 
   # Start up the firewalling and routing to  send traffic to us.
-  #### FIXME UNCOMMENT THIS
-  #startRedirection()
+  #from ml.Middler_Firewall import startRedirection,stopRedirection
+  ml.Middler_Firewall.startRedirection()
 
   # Activate the DNS spoofing?
   #os.spawnl(os.P_NOWAIT,r"/Users/jay/BFF_DNS.pl","")
