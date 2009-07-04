@@ -28,11 +28,11 @@ def redirectIPFWstart():
   # Set up firewall to grab port 80 traffic flowing through this machine and send it
   # to the proxy.
 
-  # For debugging, to avoid running this program as root, we redirect traffic destined to
-  # 127.0.0.1 port 80 to port 8080.
+  # For debugging where you can't run the program as root, or if you just like your security like that, you could
+  # run the Middler's HTTP proxy on an unprivileged port, and use the rule below that's appropriate to your O/S to
+  # redirect traffic to that port.
   #
-  #ipfw add 1000 fwd 127.0.0.1,8080 tcp from any to 127.0.0.1 dst-port 80 in via lo0
-
+  # OSX: ipfw add 1000 fwd 127.0.0.1,8080 tcp from any to 127.0.0.1 dst-port 80 in via lo0
 
   # Run ipfw list, so we can look for a rule that starts with 01000
   ipfw_cmd=os.popen("/sbin/ipfw list","r")
@@ -41,15 +41,16 @@ def redirectIPFWstart():
 
   found_line=0
   for line in ipfw_lines:
-    if re.match(r"^01000 fwd 127\.0\.0\.1\,8080 tcp from any to any dst-port 80 in via lo0",line):
+    if re.match(r"^01000 fwd 127\.0\.0\.1\,80 tcp from any to any dst-port 80 in via lo0",line):
       found_line=1
 
   if not found_line:
-    ipfw_modify=os.popen("/sbin/ipfw add 1000 fwd 127.0.0.1,8080 tcp from any to any dst-port 80 in via lo0")
+    ipfw_modify=os.popen("/sbin/ipfw add 1000 fwd 127.0.0.1,80 tcp from any to any dst-port 80 in via lo0")
 
   found_line
 
 def redirectIPFWstop():
+  
   # Run ipfw list, so we can look for a rule that starts with 01000
   ipfw_cmd=os.popen("/sbin/ipfw list","r")
   ipfw_lines=ipfw_cmd.readlines()
@@ -57,7 +58,7 @@ def redirectIPFWstop():
 
   found_line=0
   for line in ipfw_lines:
-    if re.match(r"^01000 fwd 127\.0\.0\.1\,8080 tcp from any to any dst-port 80 in via en1",line):
+    if re.match(r"^01000 fwd 127\.0\.0\.1\,80 tcp from any to any dst-port 80 in via en1",line):
       found_line=1
 
   if found_line:
@@ -66,9 +67,13 @@ def redirectIPFWstop():
   found_line
 
 def redirectIPTablesStart():
+  
+  # Add a rule called MIDDLERNAT that forces any traffic destined for port 80 to go instead
+  # to the local port 80 on this system.
+  
   os.system("iptables -t nat -N MIDDLERNAT")
+  os.system("iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports 80")
   os.system("iptables -t nat -A PREROUTING -j MIDDLERNAT")
-  os.system("iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports 8080")
 
 def redirectIPTablesStop():
 
