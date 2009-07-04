@@ -46,7 +46,7 @@ The Middler depends on the following Python modules:
     * scapy
     * libpcap
     * readline
-    * libdnet
+    * libdnet (libdumbnet on some systems where dnet means DECnet.)
     * beautifulsoup
 
 Please see the wiki for platform-specific installation instructions.
@@ -56,7 +56,7 @@ Please see the wiki for platform-specific installation instructions.
 Justin Searle - Co-Author
 Matt Carpenter - Co-Author
 Tom Liston - Emeritus Co-author
-Brandon Edwards - Co-Author, focus on Installation
+Brandon Edwards - Co-Author, focus on DHCP Poisoning and Installation/Update
 Jay Beale - Co-Author and Project Lead
 
 
@@ -64,5 +64,5 @@ Jay Beale - Co-Author and Project Lead
 
 Co-author Justin Searle will begin teaching Middling for Penetration Testers
 class this summer, where he'll teach people how to both use and add onto the
-Middler and other MitM tools. It promises to be very, very useful.
+Middler and other MitM tools.  The class promises to be very, very useful.
 
