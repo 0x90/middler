@@ -30,8 +30,14 @@ toggle_arpspoof = False
 ####################################################################################################
 
 def find_my_default_router_and_interface():
-    """Use netstat -rn to figure out what the operating system's default router is and what
-    its Internet interface is."""
+
+    # On Linux, get the router IP address out of /proc/net/route
+    # 
+    # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
+    # (00000000) in its second (destination) column.
+
+    # Use netstat -rn to figure out what the operating system's default router is and what
+    # its Internet interface is.
 
     (stdin,stdout) = os.popen2("netstat -rn","r",100)
     for line in stdout:
@@ -148,6 +154,9 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
 
     # Eventually, let's use an nmap ARP or "list" scan to enumerate all IPs in
     # the subnet.  For now, we'll assume a class C.
+    # As an intermediate move, we could look at the netmask.  On Linux, we can read
+    # this from /proc/net/route's 8th column, though the netmask is in hexadecimal.
+
     # elif (os.path.exists(r'/usr/bin/nmap') or os.path.exists(r'/usr/local/bin/nmap')):
     else:
       while 1:
