@@ -65,7 +65,7 @@ def debug_log(message,add_newline=1):
   # Write to the developer log.
   debug_log_file.write("%s: %s " % (time.ctime(time.time()) , message) )
   if (add_newline==1):
-    dev_log_file.write("\n")
+    debug_log_file.write("\n")
 
   # Stop writing to the developer file.
   debug_log_lock.release()
