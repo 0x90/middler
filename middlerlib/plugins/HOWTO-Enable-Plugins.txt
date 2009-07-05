@@ -1,7 +1,0 @@
-To enable a plugin, say plugin-YOURS.py, simply create a symbolic link from available/plugin-YOURS.py enabled/plugin-YOURS.py, like so:
-
-	ln -s available/plugin-YOURS.py enabled/plugin-YOURS.py
-
-To disable plugin-YOURS.py, just delete the symbolic link:
-
-	rm enabled/plugin-YOURS.py
