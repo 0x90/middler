@@ -90,8 +90,8 @@ def find_mac(interface):
   # If there are not MAC address lines, we're busted.
   if ether_lines == []:
     # Warn the user that we can't arpspoof if there are no interfaces
-    debug_log( "  WARNING: cannot determine MAC address for interface " + interface
-    debug_log( "  ARP spoofing deactivated."
+    debug_log( "  WARNING: cannot determine MAC address for interface %s " % interface)
+    debug_log( "  ARP spoofing deactivated.")
     return("NONE")
   else:
     line = ether_lines.pop()
@@ -874,7 +874,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
               ### TODO: Make sure we don't redict if this is the response to a link that was already redirected.
 
               #modified_response = modified_response + "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n"
-      print
       #elif inject_status_code == 1:
               #modified_response = modified_response + status_code_to_inject
             #else:

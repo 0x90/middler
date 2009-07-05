@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import middlerlib as ml
 import signal
-
 import sys,os
 
 # Add The Middler's module namespace to the path.
 sys.path.append(os.curdir + os.sep)
+
+import middlerlib.JLog
 
 ############################################################################################################
 # Parse command-line options                                                                               #
