@@ -271,7 +271,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
     ###### This code loads the fileparsers into the PLUGINS list
     parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep)
 #    parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
-    print >>sys.stderr,(">>plugindir: %s<<"%parserdir)
+    debug_log(">>plugindir: %s<<"%parserdir)
 
     filename = None
     for filename in  os.listdir(parserdir):
@@ -280,10 +280,10 @@ if (not PLUGINS or len(PLUGINS) == 0):
 	    # start with _ to our list of plugins.
 
             if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
-#		print >>sys.stderr,(">>Trying to load plugin from middlerlib.plugins.enabled.%s"%filename[:-3] )
+#		debug_log(">>Trying to load plugin from middlerlib.plugins.enabled.%s"%filename[:-3] )
                 PLUGINS.append(__import__("middlerlib.plugins.%s"%filename[:-3], None, None, "middlerlib.plugins"))
         except:
-            print >>sys.stderr,("Error loading plugin %s"%filename)
+            debug_log("Error loading plugin %s"%filename)
             x,y,z = sys.exc_info()
             sys.excepthook(x,y,z)
             pass
@@ -296,7 +296,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
     ###### This code loads the fileparsers into the PLUGINS list
     #print os.path.abspath(os.curdir)
     parserdir = "./plugins"
-    print >>sys.stderr,(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
+    debug_log(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
     filename = None
     try:
       for filename in  os.listdir(parserdir):
@@ -304,7 +304,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
               if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
                   PLUGINS.append(__import__("middlerlib.plugins.%s"%filename[:-3], None, None, "middlerlib.plugins"))
           except:
-              print >>sys.stderr,("Error loading plugin %s"%filename)
+              debug_log("Error loading plugin %s"%filename)
               x,y,z = sys.exc_info()
               sys.excepthook(x,y,z)
               pass
@@ -370,11 +370,11 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           for param in params:
             if re.match("=",param):
               (variable,value) = param.split("=")
-              print "POST data: ",variable,"=",value,"\n"
+              developer_log("POST data: %s=%s" % (variable,value))
             else:
-              print "POST data: ",param,"\n"
+              developer_log("POST data: %s" % param)
         else:
-          print "POST data: ",line,"\n"
+          developer_log("POST data: %s" % line)
 
       modified_request = modified_request + line
     # end while line == "":
@@ -402,7 +402,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         browser_version=browser_version_set[0]
         current_user["browser_type"] = browser_type
         current_user["browser_version"] = browser_version
-        print "Found that user has Firefox version",browser_version,"\n"
+       # print "Found that user has Firefox version",browser_version,"\n"
       elif iphone_safari_pat.match(user_agent):
         # Example of catching iPhone in use:
         #
@@ -415,7 +415,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         current_user["browser_type"] = browser_type
         current_user["browser_version"] = browser_version
         # TODO: Figure out which version changes the most or is used in OSVDB for tracking
-        print "Found that user has iPhone Safari version",browser_version,"\n"
+        #print "Found that user has iPhone Safari version",browser_version,"\n"
       #elif apple_pub_sub.match(useragent):
       #  User-Agent: Apple-PubSub/65.1.1
 
@@ -505,7 +505,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
     global PLUGINS
     for plugin in PLUGINS:
       try:
-        print "executing plugin %s"%plugin
+        developer_log("executing plugin %s" % plugin)
         request_headers, data, changed, stop = plugin.doRequest(session, request_headers, data)
         if stop:
           break
@@ -538,7 +538,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         raise e
       except Exception, msg:
         print "ERROR in plugin %s: %s"%(repr(plugin), repr(msg))
-    print "returning from doResponse"
+    developer_log("returning from doResponse")
     return (session, response_headers, data)
 
 

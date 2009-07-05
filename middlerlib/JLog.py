@@ -5,11 +5,12 @@
 # JLog!
 
 import thread
+import time
 
 #global DEVELOPER_LOGGING
-DEVELOPER_LOGGING=1
+DEVELOPER_LOGGING=0
 #global DEBUG_LOGGING
-DEBUG_LOGGING=1
+DEBUG_LOGGING=0
 
 dev_log_file =open("developerlog.txt","w")
 debug_log_file =open("debuglog.txt","w")
@@ -26,9 +27,15 @@ def stop_logging():
   dev_log_file.close()
   debug_log_file.close()
 
+def jlog_debug_on():
+  DEBUG_LOGGING = 1
+
+def jlog_developer_on():
+  DEVELOPER_LOGGING = 1
+
 def log(message,add_newline=1):
 
-  print message
+  print ("%s: %s" % (time.ctime(time.time())) , message )
   if add_newline == 1:
     print "\n"
 
@@ -37,9 +44,11 @@ def developer_log(message,add_newline=1):
 
   # Acquire the thread lock associated with logging
   dev_log_lock.acquire()
-  # Write to the developer log.
 
-  dev_log_file.write(message + "\n")
+  # Write to the developer log.
+  dev_log_file.write( "%s: %s " % (time.ctime(time.time()),message) )
+  if add_newline==1:
+    dev_log_file.write("\n")
 
   # Stop writing to the developer file.
   dev_log_lock.release()
@@ -54,7 +63,10 @@ def debug_log(message,add_newline=1):
   # Acquire the thread lock associated with logging
   debug_log_lock.acquire()
   # Write to the developer log.
-  debug_log_file.write(message)
+  debug_log_file.write("%s: %s " % (time.ctime(time.time()) , message) )
+  if (add_newline==1):
+    dev_log_file.write("\n")
+
   # Stop writing to the developer file.
   debug_log_lock.release()
 
@@ -62,8 +74,7 @@ def debug_log(message,add_newline=1):
     log(message,add_newline)
 
 def debug_log_no_newline(message):
-  if DEBUG_LOGGING:
-    log(message,0)
+    debug_log(message,0)
 
 def error_log(message,add_newline=1):
   log(message,add_newline)
