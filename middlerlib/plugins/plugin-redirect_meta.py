@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import urllib2
-from BeautifulSoup import BeautifulSoup
+import re
+#from BeautifulSoup import BeautifulSoup
 import support.header as header
 
 ### CHANGE AS NEEDED
