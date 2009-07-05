@@ -781,6 +781,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 	# Switch in the original headers.
         for header in request_headers[1:]:
 	  lvalue = header[0]
+	  lvalue = lvalue.capitalize()
 	  rvalue = header[1]
 	  j.putheader(lvalue,rvalue[0:-1])
 #	  print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
@@ -828,7 +829,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           hdr = unordered_headers[header_idx]
           #print repr(hdr)
           header, value = hdr
-	  response_headers.append([header,value])
+	  response_headers.append([header.capitalize(),value])
 	except:
 	  print "Header parsing failing.\n"
 	  
