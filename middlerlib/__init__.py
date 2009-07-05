@@ -826,7 +826,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       for header_idx in xrange(1, len(unordered_headers)):
         try:
           hdr = unordered_headers[header_idx]
-          print repr(hdr)
+          #print repr(hdr)
           header, value = hdr
 	  response_headers.append([header,value])
 	except:
@@ -848,7 +848,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       rets = "\n"
       #response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
-      print "response_code_line is %s\n" % response_code_line
       modified_response_temp = [ response_code_line ]
 
       for header_idx in xrange(1,len(response_headers)):
