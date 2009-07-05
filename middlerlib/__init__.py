@@ -11,8 +11,9 @@ from middlerlib.JLog import *
 # Start intercepting traffic.
 from Middler_Firewall import startRedirection,stopRedirection
 
+from httplib import *
 import os, signal, socket, SocketServer, select, sys, Cookie
-import re, urllib
+import re, urllib,time
 import threading, thread
 from scapy import *
 
@@ -326,8 +327,9 @@ class PluginSaysDontSend(Exception):
     self.data = headers
 
 #class MiddlerThreadTCPServer(SocketServer.ThreadingTCPServer):
-class MiddlerThreadTCPServer(SocketServer.TCPServer):
-  allow_reuse_address = True
+#class MiddlerThreadTCPServer(SocketServer.TCPServer):
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+      allow_reuse_address = True
 
 
 #
@@ -335,6 +337,7 @@ class MiddlerThreadTCPServer(SocketServer.TCPServer):
 #
 
 class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
+#class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
   # Set up a sessions() data structure for tracking information about
   # each target user, indexed by IP address.
@@ -765,69 +768,39 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #response_to_send_to_client=""
       #server_headers = {}
       response=""
-
+      modified_headers = []
+      
       # Open a connection to the desired server and send request
 
-
-      # If we need to do this over ssl, use the urlopen library.
-      if need_to_do_this_over_ssl:
-        debug_log("Connecting HTTPS to %s\n" % desthostname)
-        # Construct an https URL.
-        newurl = "".join(("https://", desthostname, "/", url))
-        #developer_log("constructed URL %s\n" % newurl)
-        server = urllib.urlopen(newurl)
-        response = server.read()
-        server.close()
-      # ...otherwise, use the straight socket library
-      else:
+      try:
         debug_log("Connecting HTTP to: %s:%d\n" % (desthostname,port))
-        modified_headers = []
+	print("Connecting HTTP to: %s:%d\n" % (desthostname,port))
+	j=HTTPConnection("%s:%d" % (desthostname,port) )
+	j.putrequest(method,url,"skip_host")
+
+	# Switch in the original headers.
         for header in request_headers[1:]:
-          modified_headers.append("%s: %s"%(header))
-        modified_request = "".join([ request_headers[0][1], "".join(modified_headers), "\n", request_data, "\n"])
+	  lvalue = header[0]
+	  rvalue = header[1]
+	  j.putheader(lvalue,rvalue[0:-1])
+#	  print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
 
-	# Create a socket for talking to the web server.
-	server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server.settimeout(5)
-        server_tuple = (desthostname,port)
-        debug_log("About to connect to: %s:%d\n" % (desthostname, port))
+	j.endheaders()
+	j.send(request_data)
+	
+	# Now get a response and take the parsing for free!
+	response_object=j.getresponse()
+      
+      except:
+	debug_log("Connection failed to host %s\n" % desthostname)
+	break
 
-        try:
-	  # Attempt to connect and send the request
-          server.connect(server_tuple)
-          #print modified_request
-          server.send(modified_request+"\n")
-        except:
-	  #print "Closing - failed to connect and send?\n"
-	  #sys.stdout.flush()
-	  server.close()
-          debug_log("Connection failed to host %s\n" % desthostname)
-          break
         #debug_log("Just sent modified request: \n%s" % modified_request)
         #developer_log("Just sent modified request:\n%s" % modified_request)
 
         # Now get data from the server
-	try:
-          input = server.recv(1024)
-          #print "read %d bytes from socket"%len(input)
-	  
-	  while input != '':
-            response = response + input
-            input = server.recv(1024)
-            #print "read %d bytes from socket"%len(input)
-	    #debug_log("Added more to response: %s" % input)
-	except socket.error:
-	  server.close()
-	  #debug_log("socket error - setting close requested.\n")
-	  close_requested=1
-	  developer_log("closing server connection inside the socket.error exception catch.\n")
-	  break
-	except:
-	  developer_log("server read loop triggered non-socket.error exception")
-	  server.close()
-	  
-	server.close()
-
+	# Turn the socket into a file thing.
+	
       # Parse the response
       modified_response=""
 
@@ -835,128 +808,34 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       # Now parse one line at a time
       content_type_is_image = 0
 
-      firstret = response.find('\n')
-      if response[firstret-1] == '\r':
-        rets = "\r\n"
-        diff = 4
-      else:
-        rets = "\n"
-        diff = 2
-      cutoff = response.find(rets*2)
+      http_version = "HTTP/%s.%s" % (str(response_object.version)[0],str(response_object.version)[1])
+      response_code_line = "%s %s %s" % (http_version,response_object.status,response_object.reason)
+      print "response_code_line is %s" % response_code_line
 
-      debug_log("\nResponse HTTP handling:  cutoff is set to %d\n" % cutoff)
-
-      #print repr(response[:cutoff])
-
-      if cutoff == -1:
-        #print cutoff
-        print "Error reading from server...  No separator found between headers and body of response"
-
-      # pick off the data variable, since we're about to loop through response_headers
-      debug_log("\nResponse HTTP pre-cutoff string is %s\n\n" % response[:cutoff+diff])
-      response_data = response[cutoff+diff:]
-
-      # You know code will be tough to debug when variables are called foo_temp1 and foo_temp.
-      response_header_temp1 = response[:cutoff]
-      debug_log("\nResponse_header_temp1 is %s\n" % response_header_temp1)
-      response_header_temp  = response_header_temp1.split(rets)
-
+      # We've set an initial value - overwrite this if necessary.
       if IR.inject_redirect(desthostname) == 1:
         response_headers = [ ( "Response", "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n" ) ]
       elif inject_status_code == 1:
         response_headers = [ ( "Response", status_code_to_inject ) ]
       else:
-        response_headers = [ ( "Response", response_header_temp[0]) ]
+	# Let's put the response code on top!
+	response_headers = [ "Response",response_code_line ]
 
-      response_line_debug = str(response_headers[0])
-
-      response_code, response_message = response_header_temp[0].split(" ",1)    # do we want the "real" one?
-      # now to parse the rest of the headers
-      for header_idx in xrange(1, len(response_header_temp)):
+      # Now add on the rest of the response headers.
+      unordered_headers = response_object.getheaders()
+      for header_idx in xrange(1, len(unordered_headers)):
         try:
-          hdr = response_header_temp[header_idx]
-          header, value = hdr.split(": ",1)
-
-        #for line in response.split("\n"):
-          #line = "".join((line,"\n"))
-
-          # Kludge/TODO : if we have an image, just keep copying!
-          #if content_type_is_image == 1:
-            #modified_response = modified_response + line
-
-          #if statuscode_pat.match(line):
-            #statuscode_items=statuscode_pat.match(line).groups()
-            #server_headers["response_code"]=statuscode_items[0]
-            #server_headers["response_message"]=statuscode_items[1]
-            #if IR.inject_redirect(desthostname) == 1:
-
-              ### TODO: Make sure we don't redict if this is the response to a link that was already redirected.
-
-              #modified_response = modified_response + "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n"
-      #elif inject_status_code == 1:
-              #modified_response = modified_response + status_code_to_inject
-            #else:
-              #modified_response = modified_response + line
-
-          #elif contentlen_pat.match(line):
-            #server_headers["content_length"]=contentlen_pat.match(line).groups()[0]
-            #if recalculate_content_length == 0:
-              ## TODO: Decide whether to recalculate Content-Length or to just skip sending it.
-              #if not suppress_content_length:
-                #modified_response = modified_response + line
-          #elif contenttype_pat.match(line):
-            #server_headers["content_type"]=contenttype_pat.match(line).groups()[0]
-            #modified_response = modified_response + line
-            #if re.compile(r"image/").match(server_headers["content_type"]):
-              ## We have an image - just let this process straight, without logging or further parsing?
-              #content_type_is_image = 1
-          #elif contentencoding_pat.match(line):
-            #server_headers["content_encoding"]=contentencoding_pat.match(line).groups()[0]
-            #modified_response = modified_response + line
-          if header.lower() == "connection":
-            #server_connection_val = connection_pat.match(line).groups()[0]
-            #if server_connection_val.strip().lower() == "close":
-              request_close =1
-              #debug_log("Server requested connection close.\n")
-            #else:
-              #developer_log("Server gave Connection string besides Close - we should parse this - value was %s.\n" % server_connection_val)
-
-          #elif setcookie_pat.match(line):
-            #received_cookies = setcookie_pat.match(line).groups()[0]
-            ## TODO - process and change cookies.
-            #modified_response = modified_response + line
-          #elif location_pat.match(line):
-            ## Parse the original Location line
-            #location_redirect = location_pat.match(line).groups()[0]
-            #debug_log("Got a redirect to location %s\n" % location_redirect)
-            # If we've been told to inject a redirect...
-          if IR.inject_redirect(desthostname) == 1:
-              # Do not add a location line at all - we did this when we changed the status code.
-              location_redirect = location_to_inject
-              #debug_log("Attempting location injection in place of original redirect\n")
-          # Otherwise, we can use the original one, but we might need to remove SSL from it first.
-          elif self.remove_ssl_from_response == 1:
-              location_redirect = remove_ssl(location_redirect)
-              value = "Location: " + location_redirect + "\n"
-          # Otherwise, leave the Location line untouched.
-          #else:
-              #modified_response = modified_response + line
-            # No matter what, record the location server header.
-            #server_headers["location"]=location_redirect
-          #elif out_of_header_pat.match(line):
-            # TODO We're out of the header now - maybe we could break this and just ferryt he rest of the bytes.
-            # introduce_an_error_as_a_bookmark
-            # TODO: Refactor the server connection as a socket or urlopen object, then use a while
-            # loop on readline, such that we can then do a final readlines(50000) or read(50000) loop here.
-            #modified_response = modified_response + line
-          # Done with special header parsing.
-          # Finally, if this line wasn't one of those special ones, just add it back onto the response, possibly changing it in accordance with any other patterns.
-          #else:
-              #modified_response = modified_response + line
-          response_headers.append((header,value))
-        except:
-          print "Error parsing last response_header"
-      # We should consider pulling one line at a time from the socket or something like using xreadlines or something like that...
+          hdr = unordered_headers[header_idx]
+          print repr(hdr)
+          header, value = hdr
+	  response_headers.append([header,value])
+	except:
+	  print "Header parsing failing.\n"
+	  
+      #response_headers.append(response_object.getheaders())
+      
+      # And store the data in the page.
+      response_data = response_object.read()	
 
       debug_log("\nbefore plugin, response headers are %s\n\n" % response_headers)
       self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
@@ -967,7 +846,9 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #
       # modified_response_temp was built without adding the rets to the first line!!!!
 
-      response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
+      rets = "\n"
+      #response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
+      print "response_code_line is %s\n" % response_code_line
       modified_response_temp = [ response_code_line ]
 
       for header_idx in xrange(1,len(response_headers)):
@@ -976,6 +857,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       modified_response_temp.append(response_data)
       modified_response = "".join(modified_response_temp)
 
+#      print "\n=====\nmodified_response is %s\n=========\n" % modified_response
+      
       # If we're removing ssl, do this to the entire modified_response at once, so
       # we catch links that span multiple lines or where there are more than one
       # per line

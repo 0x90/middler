@@ -2,6 +2,7 @@
 import middlerlib as ml
 import signal
 import sys,os
+import threading
 
 # Add The Middler's module namespace to the path.
 sys.path.append(os.curdir + os.sep)
@@ -132,10 +133,15 @@ if __name__ == '__main__':
 
   # Start up the multi-threaded proxy
   ml.debug_log("Activating proxy\n")
-  server = ml.MiddlerThreadTCPServer((ml.hostname,ml.port), ml.MiddlerHTTPProxy)
+
+  server = ml.ThreadedTCPServer((ml.hostname,ml.port), ml.MiddlerHTTPProxy)
   print("Middler Started and Proxying")
+  server_thread = threading.Thread(target=server.serve_forever)
+  server_thread.setDaemon(True)
+  server_thread.start()
+  print "Server loop running in thread:", server_thread.getName()
 
-  server.serve_forever()
-
+  while True:
+    pass
   # We shouldn't ever reach this line, since the signal handler should do this.
   ml.stop_logging()
