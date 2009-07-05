@@ -557,6 +557,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
     while close_requested == 0:
       debug_log("Started a new thread to handle connection from %s!" % self.client_address[0])
+      print("Recieved request from %s to ..." % self.client_address[0])
 
       #test_header = "HTTP/1.1 200 OK" + "Date: Sat, 09 Aug 2008 09:44:35 GMT" + "Server: Apache/1.3.41 (Unix) mod_perl/1.31-rc4" + "Connection: close" + "Content-Type: text/html; charset=iso-8859-1" + "\n\nfoo\n"
 
@@ -614,8 +615,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #           line.
 
       line = self.rfile.readline()
-      sys.stdout.write(line)
-      sys.stdout.write(r"\r\n")
+      #sys.stdout.write(line)
+      #sys.stdout.write(r"\r\n")
       request_headers = [ ("Request",line) ]
 
       while True:
@@ -624,7 +625,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           break
         header, value = line.split(": ",1)
         request_headers.append((header,value))
-        sys.stdout.write(line)
+        #sys.stdout.write(line)
       #print "done reading request_headers!"
 
       #### Handle Header-analysis

@@ -133,6 +133,7 @@ if __name__ == '__main__':
   # Start up the multi-threaded proxy
   ml.debug_log("Activating proxy\n")
   server = ml.MiddlerThreadTCPServer((ml.hostname,ml.port), ml.MiddlerHTTPProxy)
+  print("Middler Started and Proxying")
 
   server.serve_forever()
 
