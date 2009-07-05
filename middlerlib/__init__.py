@@ -370,7 +370,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           for param in params:
             if re.match("=",param):
               (variable,value) = param.split("=")
-              developer_log("POST data: %s=%s" % (variable,value))
+              #developer_log("POST data: %s=%s" % (variable,value))
             else:
               developer_log("POST data: %s" % param)
         else:
@@ -743,10 +743,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       try:
 	if method == "POST":
 	  request_data = self.rfile.readline()
-	  developer_log("done reading POST data: \n%s"%request_data)
+	  #developer_log("done reading POST data: \n%s"%request_data)
 	else:
 	  request_data = ""
-	  developer_log("done reading data! ")
+	  #developer_log("done reading data! ")
       finally:
         self.rfile.close()
 	
@@ -798,7 +798,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 	  server.close()
           debug_log("Connection failed to host %s\n" % desthostname)
           break
-        debug_log("Just sent modified request: \n%s" % modified_request)
+        #debug_log("Just sent modified request: \n%s" % modified_request)
         #developer_log("Just sent modified request:\n%s" % modified_request)
 
 
@@ -813,7 +813,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             response = response + input
             input = server.recv(4096)
             #print "read %d bytes from socket"%len(input)
-	    debug_log("Added more to response: %s" % input)
+	    #debug_log("Added more to response: %s" % input)
 	except socket.error:
 	  server.close()
 	  #debug_log("socket error - setting close requested.\n")
@@ -982,7 +982,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         # keep track of this without the stupid kludge
 
       # Send the response back to the client
-      developer_log("Preparing to send modified response to client: %s" % modified_response)
+      #developer_log("Preparing to send modified response to client: %s" % modified_response)
       try:
 	self.wfile.write(modified_response)
 	self.wfile.flush()
