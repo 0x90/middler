@@ -738,7 +738,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           ##modified_request = modified_request + line
         index += 1
 
-      print("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
+      debug_log("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
       try:
 	if method == "POST":
@@ -783,12 +783,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
 	# Create a socket for talking to the web server.
 	server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server.settimeout(15)
+	#server.settimeout(15)
         server_tuple = (desthostname,port)
         debug_log("About to connect to: %s:%d\n" % (desthostname, port))
 
-	print "Trying to connect\n"
-	sys.stdout.flush()
         try:
 	  # Attempt to connect and send the request
           server.connect(server_tuple)
@@ -820,18 +818,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 	  server.close()
 	  #debug_log("socket error - setting close requested.\n")
 	  close_requested=1
-	  print "closing server connection inside the socket.error exception catch.\n"
-	  print ("response is now %s" % response)
-	  sys.stdout.flush()
+	  developer_log("closing server connection inside the socket.error exception catch.\n")
 	  break
-        #print "Done reading response from server...."
 
-	print "closing server connection\n\n"
-	print ("server response is %s\n=================================\n\n" % response)	
-	sys.stdout.flush()
 	server.close()
-        #response = server.recv(10240000)
-        #developer_log("Response is: %s\n" % response)
 
       # Parse the response
       modified_response=""
@@ -874,8 +864,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         response_headers = [ ( "Response", response_header_temp[0]) ]
 
       response_line_debug = str(response_headers[0])
-      debug_log("\nResponse headers - response is %s\n" % response_line_debug )
-      sys.stdout.flush()
 
       response_code, response_message = response_header_temp[0].split(" ",1)    # do we want the "real" one?
       # now to parse the rest of the headers
