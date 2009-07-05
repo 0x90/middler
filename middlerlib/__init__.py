@@ -557,7 +557,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
     while close_requested == 0:
       debug_log("Started a new thread to handle connection from %s!" % self.client_address[0])
-      print("Recieved request from %s to ..." % self.client_address[0])
 
       #test_header = "HTTP/1.1 200 OK" + "Date: Sat, 09 Aug 2008 09:44:35 GMT" + "Server: Apache/1.3.41 (Unix) mod_perl/1.31-rc4" + "Connection: close" + "Content-Type: text/html; charset=iso-8859-1" + "\n\nfoo\n"
 
@@ -735,6 +734,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           ## request headers, just add this line to the replacement request.
           ##modified_request = modified_request + line
         index += 1
+
+      print("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
       if method == "POST":
         request_data = self.rfile.readline()
