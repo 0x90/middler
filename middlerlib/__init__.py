@@ -32,7 +32,7 @@ toggle_arpspoof = False
 def find_my_default_router_and_interface():
 
     # On Linux, get the router IP address out of /proc/net/route
-    # 
+    #
     # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
     # (00000000) in its second (destination) column.
 
@@ -90,8 +90,8 @@ def find_mac(interface):
   # If there are not MAC address lines, we're busted.
   if ether_lines == []:
     # Warn the user that we can't arpspoof if there are no interfaces
-    print "  WARNING: cannot determine MAC address for interface " + interface
-    print "  ARP spoofing deactivated."
+    debug_log( "  WARNING: cannot determine MAC address for interface " + interface
+    debug_log( "  ARP spoofing deactivated."
     return("NONE")
   else:
     line = ether_lines.pop()
@@ -276,7 +276,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
     filename = None
     for filename in  os.listdir(parserdir):
         try:
-	    # Add any file in the active plugins directory that ends in .py and doesn't 
+	    # Add any file in the active plugins directory that ends in .py and doesn't
 	    # start with _ to our list of plugins.
 
             if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
@@ -294,7 +294,7 @@ if (not PLUGINS or len(PLUGINS) == 0):
 if (not PLUGINS or len(PLUGINS) == 0):
 
     ###### This code loads the fileparsers into the PLUGINS list
-    #print os.path.abspath(os.curdir)
+    #debug_log( os.path.abspath(os.curdir)
     parserdir = "./plugins"
     debug_log(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
     filename = None
@@ -345,7 +345,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
     self.client_headers = {}
     self.current_user = MiddlerHTTPProxy.sessions.getSession(client_address)
     self.remove_ssl_from_response = 0
-    #print (request, client_address, server, dir(self))
+    #debug_log( (request, client_address, server, dir(self))
     SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
 
   ####################################################################################################
@@ -708,7 +708,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           if proxyconnection.strip().lower() != "keep-alive":
             #debug_log("Encountered a Proxy-Connection: from browser - should we take the client through that proxy?\n")
             #debug_log("Proxy-Connection value was %s.\n" % proxyconnection)
-            print "Debug: stripping out a Proxy-Connection - are you sure you're not pointing your browser at this intentionally?"
+            developer_log("Debug: stripping out a Proxy-Connection - are you sure you're not pointing your browser at this intentionally?")
+
             # Strip this line out so we don't tell the server we're using a proxy.
             #
             # So the following line is commented out.
@@ -736,13 +737,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       if method == "POST":
         request_data = self.rfile.readline()
-        print "done reading POST data: \n%s"%request_data
+        developer_log("done reading POST data: \n%s"%request_data)
       else:
         request_data = ""
-        print "done reading data! "
+        developer_log("done reading data! ")
 
       self.current_user, request_headers, request_data = self.doRequest(self.current_user, request_headers, request_data)
-      print "returned from doRequest"
+      developer_log("returned from doRequest")
 
       ###########################################################################
       # Send request and parse HTTP response headers
@@ -836,7 +837,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       # You know code will be tough to debug when variables are called foo_temp1 and foo_temp.
       response_header_temp1 = response[:cutoff]
-      print response_header_temp1
       debug_log("\nResponse_header_temp1 is %s\n" % response_header_temp1)
       response_header_temp  = response_header_temp1.split(rets)
 
@@ -849,19 +849,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       response_line_debug = str(response_headers[0])
       debug_log("\nResponse headers - response is %s\n" % response_line_debug )
-      print("\nResponse headers - response is")
-      print(response_line_debug)
-      print("\n")
       sys.stdout.flush()
-      
-      #print repr(response_header_temp)
+
       response_code, response_message = response_header_temp[0].split(" ",1)    # do we want the "real" one?
-      #print repr(response_code+" "+ response_message)
       # now to parse the rest of the headers
       for header_idx in xrange(1, len(response_header_temp)):
         try:
           hdr = response_header_temp[header_idx]
-          #print repr(hdr)
           header, value = hdr.split(": ",1)
 
         #for line in response.split("\n"):
@@ -880,7 +874,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
               ### TODO: Make sure we don't redict if this is the response to a link that was already redirected.
 
               #modified_response = modified_response + "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n"
-            #elif inject_status_code == 1:
+      print
+      #elif inject_status_code == 1:
               #modified_response = modified_response + status_code_to_inject
             #else:
               #modified_response = modified_response + line
@@ -943,9 +938,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           response_headers.append((header,value))
         except:
           print "Error parsing last response_header"
-      #print "done parsing header information!!!"
-      print response_headers
-# We should consider pulling one line at a time from the socket or something like using xreadlines or something like that...
+      # We should consider pulling one line at a time from the socket or something like using xreadlines or something like that...
 
       debug_log("\nbefore plugin, response headers are %s\n\n" % response_headers)
       self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
@@ -955,7 +948,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       # Caught the bug!!!!
       #
       # modified_response_temp was built without adding the rets to the first line!!!!
- 
+
       response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
       modified_response_temp = [ response_code_line ]
 
