@@ -613,9 +613,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #           not have.  If it would not have, let's have it just blank the
       #           line.
 
-      line = self.rfile.readline()
-      #sys.stdout.write(line)
-      #sys.stdout.write(r"\r\n")
+      #print("self.rfile is the following kind of object %s\n" % str(type(self.rfile)) ) 
+      try:
+	line = self.rfile.readline()
+        #sys.stdout.write(line)
+        #sys.stdout.write(r"\r\n")
+      except:
+	print "ERROR: first readline() on the request failed!\n"
+	
       request_headers = [ ("Request",line) ]
 
       try:
@@ -783,7 +788,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
 	# Create a socket for talking to the web server.
 	server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	#server.settimeout(15)
+	server.settimeout(5)
         server_tuple = (desthostname,port)
         debug_log("About to connect to: %s:%d\n" % (desthostname, port))
 
@@ -801,17 +806,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         #debug_log("Just sent modified request: \n%s" % modified_request)
         #developer_log("Just sent modified request:\n%s" % modified_request)
 
-
-
-
         # Now get data from the server
 	try:
-          input = server.recv(4096)
+          input = server.recv(1024)
           #print "read %d bytes from socket"%len(input)
 	  
 	  while input != '':
             response = response + input
-            input = server.recv(4096)
+            input = server.recv(1024)
             #print "read %d bytes from socket"%len(input)
 	    #debug_log("Added more to response: %s" % input)
 	except socket.error:
@@ -820,7 +822,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 	  close_requested=1
 	  developer_log("closing server connection inside the socket.error exception catch.\n")
 	  break
-
+	except:
+	  developer_log("server read loop triggered non-socket.error exception")
+	  server.close()
+	  
 	server.close()
 
       # Parse the response
