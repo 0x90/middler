@@ -17,7 +17,7 @@ def parseCommandLineFlags():
   from optparse import OptionParser
   parser = OptionParser(usage="%prog [-i ip] [-p port] [--sslstrip]", version="%prog 1.0")
   parser.add_option("-i", "--ip", dest="ip",
-                  help="listen on IP",default="127.0.0.1")
+                  help="listen on IP",default="0.0.0.0")
   parser.add_option("-p", "--port", dest="port",
                   help="listen on port",default="80")
   parser.add_option("-s", "--sslstrip",
