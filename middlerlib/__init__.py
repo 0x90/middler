@@ -955,7 +955,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
       modified_response_temp.append(rets)   #rets is the *identified* bytes used as CRLF
       modified_response_temp.append(response_data)
-      print repr(modified_response_temp)
       modified_response = "".join(modified_response_temp)
 
       # If we're removing ssl, do this to the entire modified_response at once, so
