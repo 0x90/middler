@@ -6,7 +6,7 @@
 # Copyright 2009 Jay Beale
 # Licensed under GPL v2
 
-from JLog import *
+from middlerlib.JLog import *
 
 # Start intercepting traffic.
 from Middler_Firewall import startRedirection,stopRedirection
@@ -618,14 +618,17 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #sys.stdout.write(r"\r\n")
       request_headers = [ ("Request",line) ]
 
-      while True:
-        line = self.rfile.readline()
-        if line in ("\r\n" ,"\n"):
-          break
-        header, value = line.split(": ",1)
-        request_headers.append((header,value))
+      try:
+        while True:
+          line = self.rfile.readline()
+          if line in ("\r\n" ,"\n"):
+            break
+          header, value = line.split(": ",1)
+          request_headers.append((header,value))
         #sys.stdout.write(line)
       #print "done reading request_headers!"
+      except:
+	debug_log("Probably just finished reading request header")
 
       #### Handle Header-analysis
       method, part2 = request_headers[0][1].split(' ',1)
@@ -737,13 +740,16 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
       print("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
-      if method == "POST":
-        request_data = self.rfile.readline()
-        developer_log("done reading POST data: \n%s"%request_data)
-      else:
-        request_data = ""
-        developer_log("done reading data! ")
-
+      try:
+	if method == "POST":
+	  request_data = self.rfile.readline()
+	  developer_log("done reading POST data: \n%s"%request_data)
+	else:
+	  request_data = ""
+	  developer_log("done reading data! ")
+      finally:
+        self.rfile.close()
+	
       self.current_user, request_headers, request_data = self.doRequest(self.current_user, request_headers, request_data)
       developer_log("returned from doRequest")
 
@@ -775,15 +781,23 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
           modified_headers.append("%s: %s"%(header))
         modified_request = "".join([ request_headers[0][1], "".join(modified_headers), "\n", request_data, "\n"])
 
-        server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	# Create a socket for talking to the web server.
+	server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	server.settimeout(15)
         server_tuple = (desthostname,port)
         debug_log("About to connect to: %s:%d\n" % (desthostname, port))
 
+	print "Trying to connect\n"
+	sys.stdout.flush()
         try:
+	  # Attempt to connect and send the request
           server.connect(server_tuple)
           #print modified_request
           server.send(modified_request+"\n")
         except:
+	  #print "Closing - failed to connect and send?\n"
+	  #sys.stdout.flush()
+	  server.close()
           debug_log("Connection failed to host %s\n" % desthostname)
           break
         debug_log("Just sent modified request: \n%s" % modified_request)
@@ -793,19 +807,29 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
 
         # Now get data from the server
-        input = server.recv(1000000)
-        #print "read %d bytes from socket"%len(input)
-        while input != '':
-          try:
+	try:
+          input = server.recv(4096)
+          #print "read %d bytes from socket"%len(input)
+	  
+	  while input != '':
             response = response + input
-            input = server.recv(1024000)
+            input = server.recv(4096)
             #print "read %d bytes from socket"%len(input)
-          except socket.error:
-            #debug_log("socket error - setting close requested.\n")
-            close_requested=1
-            break
+	    debug_log("Added more to response: %s" % input)
+	except socket.error:
+	  server.close()
+	  #debug_log("socket error - setting close requested.\n")
+	  close_requested=1
+	  print "closing server connection inside the socket.error exception catch.\n"
+	  print ("response is now %s" % response)
+	  sys.stdout.flush()
+	  break
         #print "Done reading response from server...."
 
+	print "closing server connection\n\n"
+	print ("server response is %s\n=================================\n\n" % response)	
+	sys.stdout.flush()
+	server.close()
         #response = server.recv(10240000)
         #developer_log("Response is: %s\n" % response)
 
@@ -969,14 +993,17 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         # TODO: Log the URL and source IP that we're changing to non-SSL so we can
         # keep track of this without the stupid kludge
 
-      #developer_log("Preparing to send modified response to client: %s" % modified_response)
       # Send the response back to the client
-      #print repr(modified_response)
-      self.wfile.write(modified_response)
-      self.wfile.flush()
-      ##### TODO-high: This is experimental... remove if it breaks stuff.
-      close_requested = 1
-      server.close()
+      developer_log("Preparing to send modified response to client: %s" % modified_response)
+      try:
+	self.wfile.write(modified_response)
+	self.wfile.flush()
+      
+	##### TODO-high: This is experimental... remove if it breaks stuff.
+	close_requested = 1
+	self.wfile.close()
+      except:
+	self.wfile.close()
       #self.wfile.close()
       #self.rfile.close()
 
