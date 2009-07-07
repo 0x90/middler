@@ -2,7 +2,7 @@
 import urllib2
 import re
 #from BeautifulSoup import BeautifulSoup
-import support.header as header
+import middlerlib.header as header
 
 ### CHANGE AS NEEDED
 request_match = (("Host","microsoft.com"),)
@@ -35,4 +35,3 @@ def doResponse(session, request_header, response_header, data):
   ### RETURN DATA
   header.headerfix(response_header, "Content-Length", str(len(data)) + '\r\n')
   return(response_header, data, changed, stop)
-

@@ -7,7 +7,7 @@ import threading
 # Add The Middler's module namespace to the path.
 sys.path.append(os.curdir + os.sep)
 
-import middlerlib.JLog
+from jlog import *
 
 ############################################################################################################
 # Parse command-line options                                                                               #

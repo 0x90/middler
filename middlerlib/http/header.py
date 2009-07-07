@@ -1,6 +1,6 @@
 # This file contains API helper routnes for checking and changing HTTP headers.
 
-from middlerlib.JLog import *
+from jlog import *
 
 headertest_stdmatch = (("Content-type","text/html"),)
 

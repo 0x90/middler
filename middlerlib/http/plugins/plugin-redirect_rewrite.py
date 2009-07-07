@@ -2,7 +2,7 @@
 import urllib2
 #import re
 #from BeautifulSoup import BeautifulSoup
-import support.header as header
+import middlerlib.header as header
 
 ### CHANGE AS NEEDED
 request_match = (("Host","debian.com"),)
@@ -33,4 +33,3 @@ def doResponse(session, request_header, response_header, data):
   changed = 0
   stop = 0
   return(response_header, data, changed, stop)
-

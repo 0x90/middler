@@ -6,13 +6,14 @@
 # Copyright 2009 Jay Beale
 # Licensed under GPL v2
 
-from middlerlib.JLog import *
+from jlog import *
 
 # Start intercepting traffic.
-from Middler_Firewall import startRedirection,stopRedirection
+from middlerlib.traffic_capture import startRedirection,stopRedirection
 
 from httplib import *
-import os, signal, socket, SocketServer, select, sys, Cookie
+from socket import *
+import os, signal, SocketServer, select, sys, Cookie
 import re, urllib,time
 import threading, thread
 from scapy import *
@@ -616,14 +617,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #           not have.  If it would not have, let's have it just blank the
       #           line.
 
-      #print("self.rfile is the following kind of object %s\n" % str(type(self.rfile)) ) 
+      #print("self.rfile is the following kind of object %s\n" % str(type(self.rfile)) )
       try:
 	line = self.rfile.readline()
         #sys.stdout.write(line)
         #sys.stdout.write(r"\r\n")
       except:
 	print "ERROR: first readline() on the request failed!\n"
-	
+
       request_headers = [ ("Request",line) ]
 
       try:
@@ -757,7 +758,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 	  #developer_log("done reading data! ")
       finally:
         self.rfile.close()
-	
+
       self.current_user, request_headers, request_data = self.doRequest(self.current_user, request_headers, request_data)
       developer_log("returned from doRequest")
 
@@ -769,7 +770,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       #server_headers = {}
       response=""
       modified_headers = []
-      
+
       # Open a connection to the desired server and send request
 
       try:
@@ -788,10 +789,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
 	j.endheaders()
 	j.send(request_data)
-	
+
 	# Now get a response and take the parsing for free!
 	response_object=j.getresponse()
-      
+
       except:
 	debug_log("Connection failed to host %s\n" % desthostname)
 	break
@@ -801,7 +802,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
         # Now get data from the server
 	# Turn the socket into a file thing.
-	
+
       # Parse the response
       modified_response=""
 
@@ -832,11 +833,11 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 	  response_headers.append([header.capitalize(),value])
 	except:
 	  print "Header parsing failing.\n"
-	  
+
       #response_headers.append(response_object.getheaders())
-      
+
       # And store the data in the page.
-      response_data = response_object.read()	
+      response_data = response_object.read()
 
       debug_log("\nbefore plugin, response headers are %s\n\n" % response_headers)
       self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
@@ -858,7 +859,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       modified_response = "".join(modified_response_temp)
 
 #      print "\n=====\nmodified_response is %s\n=========\n" % modified_response
-      
+
       # If we're removing ssl, do this to the entire modified_response at once, so
       # we catch links that span multiple lines or where there are more than one
       # per line
@@ -874,7 +875,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
       try:
 	self.wfile.write(modified_response)
 	self.wfile.flush()
-      
+
 	##### TODO-high: This is experimental... remove if it breaks stuff.
 	close_requested = 1
 	self.wfile.close()
