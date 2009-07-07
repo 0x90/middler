@@ -8,6 +8,7 @@ import threading
 sys.path.append(os.curdir + os.sep)
 
 from jlog import *
+from middlerlib.traffic_capture import StartRedirection,StopRedirection
 
 ############################################################################################################
 # Parse command-line options                                                                               #
@@ -33,7 +34,6 @@ def parseCommandLineFlags():
   (options,args)=parser.parse_args()
 
   return (options,args)
-
 
 ###################################
 # Main non-class Code starts here.
@@ -91,11 +91,11 @@ if __name__ == '__main__':
 
 
     # Turn off the firewalling/routing
-    ml.debug_log("Deactivating routing/firewall-based packet fu.")
-    ml.Middler_Firewall.stopRedirection()
+    debug_log("Deactivating routing/firewall-based packet fu.")
+    stopRedirection()
 
     # Close up the log files.
-    ml.debug_log("Closing log files.\n")
+    debug_log("Closing log files.\n")
     ml.stop_logging()
     exit(0)
 
@@ -132,9 +132,9 @@ if __name__ == '__main__':
     ml.set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_host="defaultrouter")
 
   # Start up the multi-threaded proxy
-  ml.debug_log("Activating proxy\n")
+  debug_log("Activating proxy\n")
 
-  server = ml.ThreadedTCPServer((ml.hostname,ml.port), ml.MiddlerHTTPProxy)
+  server = ml.http.http_proxy((ml.hostname,ml.port), ml.MiddlerHTTPProxy)
   print("Middler Started and Proxying")
   server_thread = threading.Thread(target=server.serve_forever)
   server_thread.setDaemon(True)
