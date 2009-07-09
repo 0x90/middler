@@ -2,6 +2,7 @@
 
 # This file contains the functions that make the current system intercept traffic.
 
+import libmiddler as ml
 # sys and os are both necessary
 import sys
 import os

@@ -2,7 +2,7 @@
 import urllib2
 import re
 #from BeautifulSoup import BeautifulSoup
-import middlerlib.header as header
+import header
 
 ### CHANGE AS NEEDED
 request_match = (("Host","gmail.com"),)

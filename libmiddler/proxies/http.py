@@ -2,7 +2,7 @@
 
 # Version 20090703
 
-#import middler
+import libmiddler as ml
 # Copyright 2009 Jay Beale
 # Licensed under GPL v2
 
@@ -28,31 +28,31 @@ toggle_arpspoof = False
 
 def find_my_default_router_and_interface():
 
-        # On Linux, get the router IP address out of /proc/net/route
-        #
-        # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
-        # (00000000) in its second (destination) column.
+    # On Linux, get the router IP address out of /proc/net/route
+    #
+    # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
+    # (00000000) in its second (destination) column.
 
-        # Use netstat -rn to figure out what the operating system's default router is and what
-        # its Internet interface is.
+    # Use netstat -rn to figure out what the operating system's default router is and what
+    # its Internet interface is.
 
-        (stdin,stdout) = os.popen2("netstat -rn","r",100)
-        for line in stdout:
-                # BSD and OS X
-                if line.startswith("default"):
-                        fields = line.split()
-                        router_interface = fields[5]
-                        router_ip = fields[1]
-                        break
-                elif line.startswith("0.0.0.0"):
-                        fields = line.split()
-                        router_interface = fields[7]
-                        router_ip = fields[1]
-                        break
-        stdin.close()
-        stdout.close()
+    (stdin,stdout) = os.popen2("netstat -rn","r",100)
+    for line in stdout:
+        # BSD and OS X
+        if line.startswith("default"):
+            fields = line.split()
+            router_interface = fields[5]
+            router_ip = fields[1]
+            break
+        elif line.startswith("0.0.0.0"):
+            fields = line.split()
+            router_interface = fields[7]
+            router_ip = fields[1]
+            break
+    stdin.close()
+    stdout.close()
 
-        return (router_interface,router_ip)
+    return (router_interface,router_ip)
 
 ####################################################################################################
 # ARP spoofing code
@@ -87,8 +87,8 @@ def find_mac(interface):
     # If there are not MAC address lines, we're busted.
     if ether_lines == []:
         # Warn the user that we can't arpspoof if there are no interfaces
-        debug_log( "    WARNING: cannot determine MAC address for interface %s " % interface)
-        debug_log( "    ARP spoofing deactivated.")
+        ml.jjlog.debug( "    WARNING: cannot determine MAC address for interface %s " % interface)
+        ml.jjlog.debug( "    ARP spoofing deactivated.")
         return("NONE")
     else:
         line = ether_lines.pop()
@@ -196,8 +196,8 @@ def remove_ssl(text):
     return newtext
 
 #def parse_useragent(useragent):
-        #pass                # DO SOMETHING HERE!?
-        #return useragent
+    #pass        # DO SOMETHING HERE!?
+    #return useragent
 
 
 #
@@ -223,7 +223,7 @@ prefix["acceptencoding"] = "Accept-Encoding"
 client_header_prefixes = tuple(prefix.keys())
 
 for item in client_header_prefixes:
-        len_prefix[item] = len(prefix[item])
+    len_prefix[item] = len(prefix[item])
 
 # Pre-compile regular expressions for client request_headers.
 method_pat=re.compile(r"^(GET|POST|CONNECT) (.*) (HTTP\/\d.\d)")
@@ -248,65 +248,65 @@ out_of_header_pat=re.compile(r"^\n?")
 # so as to use that information while handling other connections.
 #
 # Among other things, this is where we keep note of someone's username
-# in an application.    When we get the GUI going, this is where we'll
+# in an application.  When we get the GUI going, this is where we'll
 # track what actions we've cued for their user on their next session.
 #
 
 class Sessions(dict):
-        def getSession(self, source_ip):
-                session = self.get(source_ip, None)
-                if session == None:
-                        session = { 'source_ip' : source_ip }
-                        self[source_ip] = session
-                return session
+    def getSession(self, source_ip):
+        session = self.get(source_ip, None)
+        if session == None:
+            session = { 'source_ip' : source_ip }
+            self[source_ip] = session
+        return session
 
 # Check sys.modules['middler']'s directory for a plugins/ directory.
 
 PLUGINS = []
 if (not PLUGINS or len(PLUGINS) == 0):
 
-        ###### This code loads the fileparsers into the PLUGINS list
-        parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep)
-#        parserdir = "%s%splugins"%(os.sep.join(sys.modules['middlerlib'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
-        debug_log(">>plugindir: %s<<"%parserdir)
+    ###### This code loads the fileparsers into the PLUGINS list
+    parserdir = "%s%splugins"%(os.sep.join(sys.modules['libmiddler'].__file__.split(os.sep)[:-1]), os.sep)
+    #parserdir = "%s%splugins"%(os.sep.join(sys.modules['libmiddler'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
+    ml.jjlog.debug(">>plugindir: %s<<"%parserdir)
 
-        filename = None
-        for filename in    os.listdir(parserdir):
-                try:
-	        # Add any file in the active plugins directory that ends in .py and doesn't
-	        # start with _ to our list of plugins.
+    filename = None
+    for filename in  os.listdir(parserdir):
+        try:
+        # Add any file in the active plugins directory that ends in .py and doesn't
+        # start with _ to our list of plugins.
 
-                        if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
-#		debug_log(">>Trying to load plugin from middlerlib.plugins.enabled.%s"%filename[:-3] )
-                                PLUGINS.append(__import__("middlerlib.plugins.%s"%filename[:-3], None, None, "middlerlib.plugins"))
-                except:
-                        debug_log("Error loading plugin %s"%filename)
-                        x,y,z = sys.exc_info()
-                        sys.excepthook(x,y,z)
-                        pass
+            if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
+        #ml.jjlog.debug(">>Trying to load plugin from libmiddler.plugins.enabled.%s"%filename[:-3] )
+                PLUGINS.append(__import__("libmiddler.plugins.%s"%filename[:-3], None, None, "libmiddler.plugins"))
+        except:
+            ml.jjlog.debug("Error loading plugin %s"%filename)
+            x,y,z = sys.exc_info()
+            sys.excepthook(x,y,z)
+            pass
 
 # If we haven't found the plugins/ directory yet, check the current directory
 # for a plugins/ directory.
 
 if (not PLUGINS or len(PLUGINS) == 0):
 
-        ###### This code loads the fileparsers into the PLUGINS list
-        #debug_log( os.path.abspath(os.curdir)
-        parserdir = "./plugins"
-        debug_log(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
-        filename = None
-        try:
-            for filename in    os.listdir(parserdir):
-                    try:
-                            if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
-                                    PLUGINS.append(__import__("middlerlib.plugins.%s"%filename[:-3], None, None, "middlerlib.plugins"))
-                    except:
-                            debug_log("Error loading plugin %s"%filename)
-                            x,y,z = sys.exc_info()
-                            sys.excepthook(x,y,z)
-                            pass
-        except OSError:
-            pass
+    ###### This code loads the fileparsers into the PLUGINS list
+    #ml.jjlog.debug( os.path.abspath(os.curdir)
+    parserdir = "./plugins"
+    ml.jjlog.debug(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
+    filename = None
+    try:
+        for filename in  os.listdir(parserdir):
+            try:
+                if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
+                    PLUGINS.append(__import__("libmiddler.plugins.%s"%filename[:-3], None, None, "libmiddler.plugins"))
+            except:
+                ml.jjlog.debug("Error loading plugin %s"%filename)
+                x,y,z = sys.exc_info()
+                sys.excepthook(x,y,z)
+                pass
+    except OSError:
+        pass
 
 ###########################################################
 # Networking code starts here.                                                        #
@@ -325,7 +325,7 @@ class PluginSaysDontSend(Exception):
 #class MiddlerThreadTCPServer(SocketServer.ThreadingTCPServer):
 #class MiddlerThreadTCPServer(SocketServer.TCPServer):
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-            allow_reuse_address = True
+    allow_reuse_address = True
 
 
 #
@@ -344,7 +344,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         self.client_headers = {}
         self.current_user = MiddlerHTTPProxy.sessions.getSession(client_address)
         self.remove_ssl_from_response = 0
-        #debug_log( (request, client_address, server, dir(self))
+        #ml.jjlog.debug( (request, client_address, server, dir(self))
         SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
 
     ####################################################################################################
@@ -359,21 +359,21 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
         while line == "":
             line = self.rfile.readline()
-            #debug_log(line)
+            #ml.jjlog.debug(line)
 
-            #debug_log(line,0)
+            #ml.jjlog.debug(line,0)
             if client_headers["method"] == "POST":
-                #developer_log("We have a post - TODO: parse the params!\n")
+                #ml.jjlog.debug("We have a post - TODO: parse the params!\n")
                 if re.match("&",line):
                     params = line.split("&")
                     for param in params:
                         if re.match("=",param):
                             (variable,value) = param.split("=")
-                            #developer_log("POST data: %s=%s" % (variable,value))
+                            #ml.jjlog.debug("POST data: %s=%s" % (variable,value))
                         else:
-                            developer_log("POST data: %s" % param)
+                            ml.jjlog.debug("POST data: %s" % param)
                 else:
-                    developer_log("POST data: %s" % line)
+                    ml.jjlog.debug("POST data: %s" % line)
 
             modified_request = modified_request + line
         # end while line == "":
@@ -422,7 +422,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # User-Agent: Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_3; en-us) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.1 Safari/525.20
 
             #else:
-                #developer_log ("UserAgent string we cannot yet parse:" + user_agent,"\n")
+                #ml.jjlog.debug ("UserAgent string we cannot yet parse:" + user_agent,"\n")
         return current_user
 
 
@@ -441,16 +441,16 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         for raw_cookie in raw_cookies:
             # We want the opposite of this:     urllib.urlencode()
             unescaped_cookie=urllib.unquote(raw_cookie)
-            #debug_log("Found client trying to send cookie: " + raw_cookie + " decoded version : " + unescaped_cookie)
-            #developer_log("Found client trying to send cookie: " + raw_cookie + " decoded version : " + unescaped_cookie)
+            #ml.jjlog.debug("Found client trying to send cookie: " + raw_cookie + " decoded version : " + unescaped_cookie)
+            #ml.jjlog.debug("Found client trying to send cookie: " + raw_cookie + " decoded version : " + unescaped_cookie)
 
             equal_pos=unescaped_cookie.index('=')
             # Separate unescaped_cookie into two pieces name= and value
             cookie_name=unescaped_cookie[0:equal_pos]
             cookie_value= unescaped_cookie[equal_pos+1:]
             # BUG/TODO: the previous line might need -1 added to end.
-            #developer_log("Found cookie name was " + cookie_name)
-            #developer_log("Found cookie value was " + cookie_value)
+            #ml.jjlog.debug("Found cookie name was " + cookie_name)
+            #ml.jjlog.debug("Found cookie value was " + cookie_value)
 
             # Now remove the equal from name=
             #cookie_name.slice!(-1,1)
@@ -464,7 +464,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             has_embedded_cookies_pat = re.compile(r"^([^=]+)=([^:=]+):")
             if has_embedded_cookies_pat.match(cookie_value):
-                #developer_log("Found that cookie " + cookie_name + " has embedded cookies inside.")
+                #ml.jjlog.debug("Found that cookie " + cookie_name + " has embedded cookies inside.")
                 # Let's split this intro strings like this:
                 #
                 # ID=949e33deacfe6ad9:
@@ -473,14 +473,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 embedded_cookies = cookie_value.split(":")
                 for embedded_cookie in embedded_cookies:
                     (name,value) = embedded_cookie.split("=")
-                    #developer_log("Embedded cookie name " + name + " has value " + value)
+                    #ml.jjlog.debug("Embedded cookie name " + name + " has value " + value)
 
                 #items = embedded_cookies.match(cookie_value).groups()
-                #developer_log("Embedded cookie 1: " + items[0] + " = " + items[1] + "\n")
+                #ml.jjlog.debug("Embedded cookie 1: " + items[0] + " = " + items[1] + "\n")
 
             else:
                 pass
-                #developer_log("Cookie " + cookie_name + " had value " + cookie_value)
+                #ml.jjlog.debug("Cookie " + cookie_name + " had value " + cookie_value)
 
             # check this for Google ID
             # Parse a line like this:
@@ -504,7 +504,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         global PLUGINS
         for plugin in PLUGINS:
             try:
-                developer_log("executing plugin %s" % plugin)
+                ml.jjlog.debug("executing plugin %s" % plugin)
                 request_headers, data, changed, stop = plugin.doRequest(session, request_headers, data)
                 if stop:
                     break
@@ -537,7 +537,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 raise e
             except Exception, msg:
                 print "ERROR in plugin %s: %s"%(repr(plugin), repr(msg))
-        developer_log("returning from doResponse")
+        ml.jjlog.debug("returning from doResponse")
         return (session, response_headers, data)
 
 
@@ -555,7 +555,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
         close_requested=0
 
         while close_requested == 0:
-            debug_log("Started a new thread to handle connection from %s!" % self.client_address[0])
+            ml.jjlog.debug("Started a new thread to handle connection from %s!" % self.client_address[0])
 
             #test_header = "HTTP/1.1 200 OK" + "Date: Sat, 09 Aug 2008 09:44:35 GMT" + "Server: Apache/1.3.41 (Unix) mod_perl/1.31-rc4" + "Connection: close" + "Content-Type: text/html; charset=iso-8859-1" + "\n\nfoo\n"
 
@@ -614,11 +614,11 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             #print("self.rfile is the following kind of object %s\n" % str(type(self.rfile)) )
             try:
-	line = self.rfile.readline()
+                line = self.rfile.readline()
                 #sys.stdout.write(line)
                 #sys.stdout.write(r"\r\n")
             except:
-	print "ERROR: first readline() on the request failed!\n"
+                print "ERROR: first readline() on the request failed!\n"
 
             request_headers = [ ("Request",line) ]
 
@@ -632,13 +632,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 #sys.stdout.write(line)
             #print "done reading request_headers!"
             except:
-	debug_log("Probably just finished reading request header")
+                ml.jjlog.debug("Probably just finished reading request header")
 
             #### Handle Header-analysis
             method, part2 = request_headers[0][1].split(' ',1)
             url, HTTPprotocol = part2.rsplit(' ',1)
             if method == "CONNECT":
-                #debug_log("Found a CONNECT method.    Changing to GET.\n")
+                #ml.jjlog.debug("Found a CONNECT method.    Changing to GET.\n")
                 method = "GET"
                 # TODO-Low: Parse CONNECT methods better so we allow people to use
                 # this as a positive proxy.
@@ -674,7 +674,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 #elif method_pat.match(line):
                     #(method,url,HTTPprotocol) = method_pat.match(line).groups()
                     #if re.compile(r"^CONNECT").match(method):
-                        #debug_log("Found a CONNECT method.    Changing to GET.\n")
+                        #ml.jjlog.debug("Found a CONNECT method.    Changing to GET.\n")
                         #method = "GET"
                         #re.sub(r"^CONNECT","GET",line)
 
@@ -702,20 +702,20 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                         ## Unless we want to tamper with or remove cookies, just do this:
                         ##modified_request = modified_request + line
                 elif header == prefix["connection"]:
-                        connection = value
-                        self.client_headers["connection"] = connection
-                        if connection == "Close":
-                            close_requested = 1
-                            #debug_log("Encountered a Connection: close from browser - it doesn't want keepalive.")
+                    connection = value
+                    self.client_headers["connection"] = connection
+                    if connection == "Close":
+                        close_requested = 1
+                            #ml.jjlog.debug("Encountered a Connection: close from browser - it doesn't want keepalive.")
 
                 elif header == prefix["proxyconnection"]:
                     proxyconnection = value
 
                     self.client_headers["proxyconnection"] = proxyconnection
                     if proxyconnection.strip().lower() != "keep-alive":
-                        #debug_log("Encountered a Proxy-Connection: from browser - should we take the client through that proxy?\n")
-                        #debug_log("Proxy-Connection value was %s.\n" % proxyconnection)
-                        developer_log("Debug: stripping out a Proxy-Connection - are you sure you're not pointing your browser at this intentionally?")
+                        #ml.jjlog.debug("Encountered a Proxy-Connection: from browser - should we take the client through that proxy?\n")
+                        #ml.jjlog.debug("Proxy-Connection value was %s.\n" % proxyconnection)
+                        ml.jjlog.debug("Debug: stripping out a Proxy-Connection - are you sure you're not pointing your browser at this intentionally?")
 
                         # Strip this line out so we don't tell the server we're using a proxy.
                         #
@@ -742,20 +742,20 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     ##modified_request = modified_request + line
                 index += 1
 
-            debug_log("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
+            ml.jjlog.debug("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
             try:
-	if method == "POST":
-	    request_data = self.rfile.readline()
-	    #developer_log("done reading POST data: \n%s"%request_data)
-	else:
-	    request_data = ""
-	    #developer_log("done reading data! ")
+                if method == "POST":
+                    request_data = self.rfile.readline()
+                    #ml.jjlog.debug("done reading POST data: \n%s"%request_data)
+                else:
+                    request_data = ""
+                    #ml.jjlog.debug("done reading data! ")
             finally:
                 self.rfile.close()
 
             self.current_user, request_headers, request_data = self.doRequest(self.current_user, request_headers, request_data)
-            developer_log("returned from doRequest")
+            ml.jjlog.debug("returned from doRequest")
 
             ###########################################################################
             # Send request and parse HTTP response headers
@@ -769,34 +769,34 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Open a connection to the desired server and send request
 
             try:
-                debug_log("Connecting HTTP to: %s:%d\n" % (desthostname,port))
-	print("Connecting HTTP to: %s:%d\n" % (desthostname,port))
-	j=HTTPConnection("%s:%d" % (desthostname,port) )
-	j.putrequest(method,url,"skip_host")
+                ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
+                print("Connecting HTTP to: %s:%d\n" % (desthostname,port))
+                j=HTTPConnection("%s:%d" % (desthostname,port) )
+                j.putrequest(method,url,"skip_host")
 
-	# Switch in the original headers.
+    # Switch in the original headers.
                 for header in request_headers[1:]:
-	    lvalue = header[0]
-	    lvalue = lvalue.capitalize()
-	    rvalue = header[1]
-	    j.putheader(lvalue,rvalue[0:-1])
-#	    print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
+                    lvalue = header[0]
+                    lvalue = lvalue.capitalize()
+                    rvalue = header[1]
+                    j.putheader(lvalue,rvalue[0:-1])
+                    #print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
 
-	j.endheaders()
-	j.send(request_data)
+                j.endheaders()
+                j.send(request_data)
 
-	# Now get a response and take the parsing for free!
-	response_object=j.getresponse()
+    # Now get a response and take the parsing for free!
+                response_object=j.getresponse()
 
             except:
-	debug_log("Connection failed to host %s\n" % desthostname)
-	break
+                ml.jjlog.debug("Connection failed to host %s\n" % desthostname)
+                break
 
-                #debug_log("Just sent modified request: \n%s" % modified_request)
-                #developer_log("Just sent modified request:\n%s" % modified_request)
+                #ml.jjlog.debug("Just sent modified request: \n%s" % modified_request)
+                #ml.jjlog.debug("Just sent modified request:\n%s" % modified_request)
 
                 # Now get data from the server
-	# Turn the socket into a file thing.
+    # Turn the socket into a file thing.
 
             # Parse the response
             modified_response=""
@@ -815,8 +815,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             elif inject_status_code == 1:
                 response_headers = [ ( "Response", status_code_to_inject ) ]
             else:
-	# Let's put the response code on top!
-	response_headers = [ "Response",response_code_line ]
+                # Let's put the response code on top!
+                response_headers = [ "Response",response_code_line ]
 
             # Now add on the rest of the response headers.
             unordered_headers = response_object.getheaders()
@@ -825,18 +825,18 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     hdr = unordered_headers[header_idx]
                     #print repr(hdr)
                     header, value = hdr
-	    response_headers.append([header.capitalize(),value])
-	except:
-	    print "Header parsing failing.\n"
+                    response_headers.append([header.capitalize(),value])
+                except:
+                    print "Header parsing failing.\n"
 
             #response_headers.append(response_object.getheaders())
 
             # And store the data in the page.
             response_data = response_object.read()
 
-            debug_log("\nbefore plugin, response headers are %s\n\n" % response_headers)
+            ml.jjlog.debug("\nbefore plugin, response headers are %s\n\n" % response_headers)
             self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
-            debug_log("after plugins, response headers are %s\n\n" % response_headers )
+            ml.jjlog.debug("after plugins, response headers are %s\n\n" % response_headers )
 
             #    GREAT! Now let's build our reply.    TODO-med: Make SSL changes happen prior to this.
             # Caught the bug!!!!
@@ -866,18 +866,18 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 # keep track of this without the stupid kludge
 
             # Send the response back to the client
-            #developer_log("Preparing to send modified response to client: %s" % modified_response)
+            #ml.jjlog.debug("Preparing to send modified response to client: %s" % modified_response)
             try:
-	self.wfile.write(modified_response)
-	self.wfile.flush()
+                self.wfile.write(modified_response)
+                self.wfile.flush()
 
-	##### TODO-high: This is experimental... remove if it breaks stuff.
-	close_requested = 1
-	self.wfile.close()
+                ##### TODO-high: This is experimental... remove if it breaks stuff.
+                close_requested = 1
+                self.wfile.close()
             except:
-	self.wfile.close()
-            #self.wfile.close()
-            #self.rfile.close()
+                self.wfile.close()
+                #self.wfile.close()
+                #self.rfile.close()
 
         # while loop ends here - this happens whenever a client
 
@@ -891,7 +891,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
     def finish(self):
         # Just in case we forgot to close off the sockets?
         # Let's see if we get errors.
-        #developer_log("Made it into SocketServer.finish!\n")
+        #ml.jjlog.debug("Made it into SocketServer.finish!\n")
 
         self.wfile.close()
         self.rfile.close()
@@ -982,7 +982,7 @@ class InjectRedirect:
         ####stopRedirection()
 
         #### Close up the log files.
-        ####debug_log("Closing log files.\n")
+        ####ml.jjlog.debug("Closing log files.\n")
         ###stop_logging()
         ###exit(0)
 
@@ -1020,7 +1020,7 @@ class InjectRedirect:
         ###arpspoof(victim_interface_list)
 
     #### Start up the multi-threaded proxy
-    ####debug_log("Activating proxy\n")
+    ####ml.jjlog.debug("Activating proxy\n")
     ###server = MiddlerThreadTCPServer((hostname,port), MiddlerHTTPProxy)
 
     ###server.serve_forever()

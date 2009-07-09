@@ -52,9 +52,9 @@ if __name__ == '__main__':
     ml.port = int(options.port)
 
     # Will we be removing SSL from the response?
-    #ml.MiddlerHTTPProxy.remove_ssl_from_response = 0
-    #if options.sslstrip:
-        #ml.MiddlerHTTPProxy.remove_ssl_from_response = 1
+    ml.proxies.http.MiddlerHTTPProxy.remove_ssl_from_response = 0
+    if options.sslstrip:
+        ml.proxies.http.MiddlerHTTPProxy.remove_ssl_from_response = 1
 
     ### Jay, commented this section out because it was throwing errors, and
     ### this functionality is already configured as a generic plugin (with re matching ;0)
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     # Start up the multi-threaded proxy
     ml.jjlog.debug("Activating proxy\n")
 
-    server = ml.http.http_proxy((ml.hostname,ml.port), ml.MiddlerHTTPProxy)
+    server = ml.proxies.http((ml.hostname,ml.port), ml.proxies.http.MiddlerHTTPProxy)
     print("Middler Started and Proxying")
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.setDaemon(True)

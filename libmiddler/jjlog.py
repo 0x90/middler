@@ -74,7 +74,7 @@ def debug(message,add_newline=1):
         log(message,add_newline)
 
 def debug_log_no_newline(message):
-        debug_log(message,0)
+    debug(message,0)
 
 def error_log(message,add_newline=1):
     log(message,add_newline)
