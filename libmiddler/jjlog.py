@@ -8,9 +8,9 @@ import thread
 import time
 
 #global DEVELOPER_LOGGING
-DEVELOPER_LOGGING=1
+DEVELOPER_LOGGING=0
 #global DEBUG_LOGGING
-DEBUG_LOGGING=1
+DEBUG_LOGGING=0
 
 dev_log_file =open("developerlog.txt","w")
 debug_log_file =open("debuglog.txt","w")

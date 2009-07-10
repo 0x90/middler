@@ -15,8 +15,9 @@ redirect_url = "http://www.takogrill.com"
 def doRequest(session, request_header, data):
   changed = 0
   stop = 0
-  if header.headertest(request_header, request_match):
 
+  if header.headertest(request_header, request_match):
+    
     ### MANIPULATE DATA
     changed = 1
     stop = 1

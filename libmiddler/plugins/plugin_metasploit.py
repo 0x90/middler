@@ -26,7 +26,7 @@ def doResponse(session, request_header, response_header, data):
 
   ### DETERMINE IF WE NEED TO CHANGE DATA
   if header.headertest(request_header, request_match) & header.headertest(response_header, response_match):
-
+    
     ### MANIPULATE DATA - INSERT SCRIPT
     data = re.sub('</body>', code1 + '</body>', data)
     changed = 1

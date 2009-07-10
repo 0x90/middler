@@ -70,7 +70,10 @@ def redirectIPTablesStart():
     # to the local port 80 on this system.
 
     os.system("iptables -t nat -N MIDDLERNAT")
-    os.system("iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports 80")
+    print "Redirecting port 80 packets to port " + str(ml.port) + "\n"
+    command = "iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports " + str(ml.port)
+    os.system(command)
+    #os.system("iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports %d" % (ml.port) )
     os.system("iptables -t nat -A PREROUTING -j MIDDLERNAT")
 
 def redirectIPTablesStop():

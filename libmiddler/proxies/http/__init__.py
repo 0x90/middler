@@ -16,7 +16,7 @@ from scapy import *
 #### Globals
 
 keep_gzip_in_requests = 0
-port = 0
+port = 80
 
 # Process ID's for any processes we fork
 child_pids_to_shutdown = []
@@ -742,6 +742,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     ##modified_request = modified_request + line
                 index += 1
 
+            port = 80
             ml.jjlog.debug("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
             try:
@@ -769,8 +770,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Open a connection to the desired server and send request
 
             try:
+                port = 80
                 ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
-                print("Connecting HTTP to: %s:%d\n" % (desthostname,port))
                 j=HTTPConnection("%s:%d" % (desthostname,port) )
                 j.putrequest(method,url,"skip_host")
 
@@ -807,16 +808,19 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             http_version = "HTTP/%s.%s" % (str(response_object.version)[0],str(response_object.version)[1])
             response_code_line = "%s %s %s" % (http_version,response_object.status,response_object.reason)
-            print "response_code_line is %s" % response_code_line
+            ml.jjlog.debug("response_code_line is %s" % response_code_line)
 
             # We've set an initial value - overwrite this if necessary.
-            if IR.inject_redirect(desthostname) == 1:
-                response_headers = [ ( "Response", "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n" ) ]
-            elif inject_status_code == 1:
-                response_headers = [ ( "Response", status_code_to_inject ) ]
-            else:
-                # Let's put the response code on top!
-                response_headers = [ "Response",response_code_line ]
+            #if inject_redirect(desthostname) == 1:
+            #    response_headers = [ ( "Response", "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n" ) ]
+            #elif inject_status_code == 1:
+            #    response_headers = [ ( "Response", status_code_to_inject ) ]
+            #else:
+            #     #Let's put the response code on top!
+            #    response_headers = [ "Response",response_code_line ]
+
+            #Let's put the response code on top!
+            response_headers = [ "Response",response_code_line ]
 
             # Now add on the rest of the response headers.
             unordered_headers = response_object.getheaders()

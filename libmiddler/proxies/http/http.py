@@ -743,6 +743,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 index += 1
 
             ml.jjlog.debug("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
+            ("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
             try:
                 if method == "POST":
@@ -833,7 +834,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             # And store the data in the page.
             response_data = response_object.read()
-
+            print "response data is %s" % (response_data)
+            print("\nbefore plugin, response headers are %s\n\n" % response_headers)
             ml.jjlog.debug("\nbefore plugin, response headers are %s\n\n" % response_headers)
             self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
             ml.jjlog.debug("after plugins, response headers are %s\n\n" % response_headers )

@@ -16,13 +16,13 @@ def headertest(header, match = headertest_stdmatch):
         return False
 
 def headerfix(header, key, value):
-    ml.jjlog.debug("In headerfix() changing key %s to value %s" % key,value)
-    ml.jjlog.debug("Header before fixing %s line is %s" % key,header)
+    #ml.jjlog.debug("In headerfix() changing key %s to value %s" % (key,value))
+    #ml.jjlog.debug("Header before fixing %s line is %s" % (key,header))
     for current in range(len(header)):
         if(header[current][0].lower().find(key.lower()) > -1):
             header.pop(current)
             header.insert( current, (key,value) )
-            ml.jjlog.debug("Changed header line %s" % str(current) )
+            ml.jjlog.debug("Changed header line %s" % (str(current)) )
 
 
 def headerget(header, key):
