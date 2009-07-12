@@ -56,20 +56,6 @@ if __name__ == '__main__':
     if options.sslstrip:
         ml.proxies.http.MiddlerHTTPProxy.remove_ssl_from_response = 1
 
-    ### Jay, commented this section out because it was throwing errors, and
-    ### this functionality is already configured as a generic plugin (with re matching ;0)
-    # Will we be injecting redirects?
-    #ml.IR = ml.http.InjectRedirect()
-    # Location we'd like to inject, with 301 (permanent) or 307 (temporary)
-    #ml.location_to_inject = ""
-    #if options.url != "":
-        #ml.location_to_inject = options.url
-        #IR.set_inject_redirect(1)
-        #if not re.match(r"^http",ml.location_to_inject):
-            #print "website_to_redirect_users_to must start with http:// or https://\n"
-            #sys.exit(1)
-
-
 
     ###################
     # Signal handling #
@@ -80,8 +66,8 @@ if __name__ == '__main__':
 
 
         # Kill off any children we've left around, generally from ARP spoofing.
-        for pid in ml.child_pids_to_shutdown:
-            kill(pid,9)
+        #for pid in ml.child_pids_to_shutdown:
+        #    kill(pid,9)
 
         # TODO-High: cleanly deactivate ARP spoofing
 
