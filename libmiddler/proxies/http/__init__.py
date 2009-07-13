@@ -633,22 +633,22 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
                 j=HTTPConnection("%s:%d" % (desthostname,port) )
                 j.putrequest(method,url,"skip_host")
-                print "\n=========\nRequest going out:\n"
-                print("Request as follows: %s %s\n" % (method,url))
+                #print "\n=========\nRequest going out:\n"
+                #print("Request as follows: %s %s\n" % (method,url))
     # Switch in the original headers.
 
                 for header in request_headers[1:]:
                     lvalue = header[0]
                     lvalue = lvalue.capitalize()
                     rvalue = header[1]
-                    print ("%s: %s" % (lvalue,rvalue[0:-1]) )
+                    #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
                     j.putheader(lvalue,rvalue[0:-1])
                     #print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
 
                 j.endheaders()
                 j.send(request_data)
-                if request_data:
-                  print ("\n%s\n" % request_data )
+                #if request_data:
+                #  print ("\n%s\n" % request_data )
 
     # Now get a response and take the parsing for free!
                 response_object=j.getresponse()
@@ -666,12 +666,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Parse the response
             modified_response=""
 
-
             # Now parse one line at a time
             content_type_is_image = 0
 
             http_version = "HTTP/%s.%s" % (str(response_object.version)[0],str(response_object.version)[1])
-            response_code_line = "%s %s %s" % (http_version,response_object.status,response_object.reason)
+            response_code_line = "%s %s %s" % (http_version,str(response_object.status),str(response_object.reason))
+            #print ("Got response code %s\n" % response_object.status)
+            #print ("Response code line is %s\n" % response_code_line)
             ml.jjlog.debug("response_code_line is %s" % response_code_line)
 
             # We've set an initial value - overwrite this if necessary.
@@ -683,8 +684,12 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             #     #Let's put the response code on top!
             #    response_headers = [ "Response",response_code_line ]
 
-            #Let's put the response code on top!
-            response_headers = [ "Response",response_code_line ]
+
+            # Let's put the response code on top, allowing the plugins to see and modify
+            # the response code.
+
+            response_headers = []
+            response_headers.append( ["Response",response_code_line] )
 
             # Now add on the rest of the response headers.
             unordered_headers = response_object.getheaders()
@@ -697,10 +702,15 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 except:
                     print "Header parsing failing.\n"
 
-            #response_headers.append(response_object.getheaders())
-
             # And store the data in the page.
             response_data = response_object.read()
+
+            # Temporary code for seeing if the difference in sites is the ret characters
+            firstret = response_data.find('\n')
+            if firstret >= 0 :
+                if response_data[firstret-1] == '\r':
+                    print ("For site %s, newlines included \\r!\n" % desthostname)
+                    ml.jjlog.debug("For site %s, newlines included \\r!" % desthostname)
 
             ml.jjlog.debug("\nbefore plugin, response headers are %s\n\n" % response_headers)
             self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
@@ -713,7 +723,11 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             rets = "\n"
             #response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
-            modified_response_temp = [ response_code_line ]
+            modified_response_temp = []
+
+            # Remove the first item from response_headers, since it's our Response Code and reason
+            # psuedo-header.  We can make this the first line, but it needs to have only the rvalue.
+            modified_response_temp.append(response_headers.pop(0)[1])
 
             for header_idx in xrange(1,len(response_headers)):
                 modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))

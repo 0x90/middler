@@ -24,7 +24,6 @@ def headerfix(header, key, value):
             header.insert( current, (key,value) )
             ml.jjlog.debug("Changed header line %s" % (str(current)) )
 
-
 def headerget(header, key):
     for current in range(len(header)):
         if(header[current][0].lower().find(key) > -1):
