@@ -37,20 +37,25 @@ def doResponse(session, request_header, response_header, data):
           if response_code != "200":
               return(response_header, data, changed, stop)
 
+
           # Change the response code to a 30x redirect.
 
           # Choose one of these two.
           response_code = 307
-          reason = "Temporary Redirect"
+          reason = "Temporary Redirect\n"
           #response_code = 301
           #reason = "Moved Permanently"
+
+          # Does this need a new line?
+          header.headerfix(response_header,"Response",("%s %s %s" % (protover,response_code,reason)) )
+          print ("Changed status code to:\n%s %s %s--" % (protover,response_code,reason))
 
           # Check if there is a Location header already?
           # TODO: make a routine that inserts a new header after a specific line.
           if header.headerget("Location") and redirect_url:
-              header.headerfix( response_header, "Location", redirect_url )
+              header.headerfix( response_header, "Location", redirect_url + "\n")
           else:
-              response_header.append( ("Location",redirect_url) )
+              response_header.append( ("Location",redirect_url + "\n") )
 
           # We have changed the header and we don't want any other plugins to touch it.
           # TODO: Decide on how to do priority/dependencies/ordering so redirects go first.
