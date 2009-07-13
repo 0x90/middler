@@ -127,7 +127,6 @@ if __name__ == '__main__':
 
     import libmiddler.proxies
     import libmiddler.proxies.http
-    import libmiddler.proxies.http.http
     server = libmiddler.proxies.http.ThreadedTCPServer((ml.hostname,ml.port), libmiddler.proxies.http.MiddlerHTTPProxy)
     print("Middler Started and Proxying")
     server_thread = threading.Thread(target=server.serve_forever)
