@@ -4,7 +4,7 @@ import re
 import libmiddler.api.header as header
 #import libmiddler.api.register_http_plugin as register_http_plugin
 
-debug_request = 1
+debug_request = 0
 debug_response = 0
 
 ### FUNCTION TO MANIPULATE CLIENT REQUEST
