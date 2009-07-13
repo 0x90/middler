@@ -26,34 +26,6 @@ toggle_arpspoof = False
 # Network interface code
 ####################################################################################################
 
-def find_my_default_router_and_interface():
-
-    # On Linux, get the router IP address out of /proc/net/route
-    #
-    # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
-    # (00000000) in its second (destination) column.
-
-    # Use netstat -rn to figure out what the operating system's default router is and what
-    # its Internet interface is.
-
-    (stdin,stdout) = os.popen2("netstat -rn","r",100)
-    for line in stdout:
-        # BSD and OS X
-        if line.startswith("default"):
-            fields = line.split()
-            router_interface = fields[5]
-            router_ip = fields[1]
-            break
-        elif line.startswith("0.0.0.0"):
-            fields = line.split()
-            router_interface = fields[7]
-            router_ip = fields[1]
-            break
-    stdin.close()
-    stdout.close()
-
-    return (router_interface,router_ip)
-
 #
 # string &remove_ssl(text) takes a string and changes all of the https links into http links
 #
@@ -661,17 +633,22 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
                 j=HTTPConnection("%s:%d" % (desthostname,port) )
                 j.putrequest(method,url,"skip_host")
-
+                print "\n=========\nRequest going out:\n"
+                print("Request as follows: %s %s\n" % (method,url))
     # Switch in the original headers.
+
                 for header in request_headers[1:]:
                     lvalue = header[0]
                     lvalue = lvalue.capitalize()
                     rvalue = header[1]
+                    print ("%s: %s" % (lvalue,rvalue[0:-1]) )
                     j.putheader(lvalue,rvalue[0:-1])
                     #print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
 
                 j.endheaders()
                 j.send(request_data)
+                if request_data:
+                  print ("\n%s\n" % request_data )
 
     # Now get a response and take the parsing for free!
                 response_object=j.getresponse()

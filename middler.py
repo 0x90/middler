@@ -7,6 +7,9 @@ import threading
 # Add The Middler's module namespace to the path.
 sys.path.append(os.curdir + os.sep)
 
+# Make a dirty global variable to hold child pids that we should remember to clean up
+ml.child_pids_to_shutdown = []
+
 ############################################################################################################
 # Parse command-line options                                                                                                                                                             #
 ############################################################################################################
@@ -64,16 +67,10 @@ if __name__ == '__main__':
     # Define a signal handler so we can make sure we close the log files.
     def handle_signal_term(signum,frame):
 
-
-        # Kill off any children we've left around, generally from ARP spoofing.
-        #for pid in ml.child_pids_to_shutdown:
-        #    kill(pid,9)
-
         # TODO-High: cleanly deactivate ARP spoofing
 
         # Deactivate any ARP spoofing
         # deactivate_arpspoof()
-
 
         # Turn off the firewalling/routing
         ml.jjlog.debug("Deactivating routing/firewall-based packet fu.")
@@ -82,6 +79,15 @@ if __name__ == '__main__':
         # Close up the log files.
         ml.jjlog.debug("Closing log files.\n")
         ml.jjlog.stop()
+
+        # Kill off any children we've left around, generally from ARP spoofing.
+        for pid in ml.child_pids_to_shutdown:
+            os.kill(pid,9)
+
+        # Wait for any processes we started to finish
+        for pid in ml.child_pids_to_shutdown:
+            os.waitpid(pid,0)
+
         exit(0)
 
 

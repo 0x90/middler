@@ -5,7 +5,11 @@ import re
 import libmiddler.api.header as header
 
 ### CHANGE AS NEEDED
-request_match = (("Host","gmail.com"),)
+
+# Note - this will only work on a page that returns a 200.  If it returns a 301 or 307, you'll
+# need to change the access code to a 200 and insert before it, probably.
+
+request_match = (("Host","mail.google.com"),)
 response_match = (("Content-type","TEXT/HTML"),)
 redirect_url = "http://www.google.com"
 redirect_code = '''

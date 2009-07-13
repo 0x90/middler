@@ -16,8 +16,16 @@ def doRequest(session, request_header, data):
   changed = 0
   stop = 0
 
-  if header.headertest(request_header, request_match):
-    
+  # Bug - this routine is only changing the Host header, but isn't
+  #       changing the socket's destination.  Further, the host
+  #       header shouldn't contain a full URL, just a hostname.
+  #       Remember, the Host header was an HTTP/1.1 addition
+  #       intended to tell the remote server which virtual
+  #       host the browser was requesting.
+  #
+
+  if 0 and header.headertest(request_header, request_match):
+
     ### MANIPULATE DATA
     changed = 1
     stop = 1
@@ -26,6 +34,7 @@ def doRequest(session, request_header, data):
 
     ### RETURN DATA
   return(request_header, data, changed, stop)
+
 
 
 
