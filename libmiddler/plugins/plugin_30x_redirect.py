@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import urllib2
 import re
+import libmiddler as ml
 import libmiddler.api.header as header
 #import libmiddler.api.register_http_plugin as register_http_plugin
 

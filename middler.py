@@ -55,9 +55,9 @@ if __name__ == '__main__':
     ml.port = int(options.port)
 
     # Will we be removing SSL from the response?
-    ml.proxies.http.MiddlerHTTPProxy.remove_ssl_from_response = 0
+    ml.proxies.http.http_proxy.MiddlerHTTPProxy.remove_ssl_from_response = 0
     if options.sslstrip:
-        ml.proxies.http.MiddlerHTTPProxy.remove_ssl_from_response = 1
+        ml.proxies.http.http_proxy.MiddlerHTTPProxy.remove_ssl_from_response = 1
 
 
     ###################
@@ -128,7 +128,9 @@ if __name__ == '__main__':
 
     import libmiddler.proxies
     import libmiddler.proxies.http
-    server = libmiddler.proxies.http.ThreadedTCPServer((ml.hostname,ml.port), libmiddler.proxies.http.MiddlerHTTPProxy)
+    import libmiddler.proxies.http.http_proxy
+
+    server = libmiddler.proxies.http.http_proxy.ThreadedTCPServer((ml.hostname,ml.port), libmiddler.proxies.http.http_proxy.MiddlerHTTPProxy)
     print("Middler Started and Proxying")
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.setDaemon(True)
