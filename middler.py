@@ -82,6 +82,7 @@ if __name__ == '__main__':
 
         # Kill off any children we've left around, generally from ARP spoofing.
         for pid in ml.child_pids_to_shutdown:
+            print "Killing off PID %d\n" % pid
             os.kill(pid,9)
 
         # Wait for any processes we started to finish

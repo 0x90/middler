@@ -20,6 +20,97 @@ from time import sleep
 
 operating_system = "nyd"
 
+
+##############
+# Networking configuration parameter helper routines
+##############
+
+def find_my_default_router_and_interface():
+
+    # On Linux, get the router IP address out of /proc/net/route
+    #
+    # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
+    # (00000000) in its second (destination) column.
+
+    # Use netstat -rn to figure out what the operating system's default router is and what
+    # its Internet interface is.
+
+    p = Popen("netstat -rn", shell=True, bufsize=100, stdin=PIPE, stdout=PIPE, close_fds=True)
+    (child_stdin, child_stdout) = (p.stdin, p.stdout)
+
+    # Now find the line corresponding to the default route.
+    for line in child_stdout:
+        # BSD and OS X
+        if line.startswith("default"):
+            fields = line.split()
+            router_interface = fields[5]
+            router_ip = fields[1]
+            break
+        elif line.startswith("0.0.0.0"):
+            fields = line.split()
+            router_interface = fields[7]
+            router_ip = fields[1]
+            break
+    child_stdin.close()
+    child_stdout.close()
+
+    # If ml.interface isn't yet defined (say, by command line), define it to be
+    # the same interface on which we send packets back out.
+
+    if ml.interface == "":
+        ml.interface = router_interface
+
+    return (router_interface,router_ip)
+
+def find_mac_and_bcast(interface):
+    # Run ifconfig for the named interface.
+    ml.jjlog.debug("Trying to find mac for interface %s\n" % interface)
+    p = Popen("ifconfig %s" % interface, shell=True, bufsize=100, stdin=PIPE, stdout=PIPE, close_fds=True)
+    (child_stdin, child_stdout) = (p.stdin, p.stdout)
+
+    # Just grab the line(s) that have a MAC address on them.
+    if sys.platform == r"darwin":
+        mac_line_pattern = "ether "
+        bcast_line_pattern = r"broadcast "
+    elif sys.platform == r"linux2":
+        mac_line_pattern = r"HWaddr "
+        bcast_line_pattern = r"Bcast:"
+
+    ifconfig_lines = child_stdout.readlines()
+    ether_lines = [ line for line in ifconfig_lines if line.find(mac_line_pattern) >= 0 ]
+    bcast_lines = [ line for line in ifconfig_lines if line.find(bcast_line_pattern) >= 0]
+
+    # If there are not MAC address lines, we're busted.
+    if ether_lines == [] or bcast_lines == []:
+        # Warn the user that we can't arpspoof if there are no interfaces
+        ml.jjlog.debug( "    WARNING: cannot determine MAC or broadcast address for interface %s " % interface)
+        ml.jjlog.debug( "    ARP spoofing deactivated.")
+        print "find_mac routine failed.\n"
+        return("NONE","NONE")
+    else:
+        # First, find the MAC address portion of the ether/HWaddr line
+        etherline = ether_lines.pop()
+        mac_offset = etherline.find(mac_line_pattern) + len(mac_line_pattern)
+        mac_address = etherline[mac_offset:].rstrip("\r\n ")
+
+        # Now, do the same for broadcast
+        bcast_line = bcast_lines.pop()
+        bcast_offset = bcast_line.find(bcast_line_pattern) + len(bcast_line_pattern)
+
+        # Here's where things differ by plaform.  The bcast address isn't the last thing on
+        # the line on Linux
+        if sys.platform == r"linux2":
+            bcast_line = bcast_line[bcast_offset:]
+            bcast_end = bcast_line.find(" ")
+            bcast_address = bcast_line[:bcast_end]
+        else:
+            bcast_address = bcast_line[bcast_offset:].rstrip("\r\n ")
+
+        ml.jjlog.debug("Found MAC address %s and broadcast address %s!\n" % (mac_address,bcast_address) )
+
+        return(mac_address,bcast_address)
+
+
 ####################################################################################################
 ### Firewall/routing setup, to route packets and capture connections                                                             #
 ####################################################################################################
@@ -37,6 +128,15 @@ def redirectIPFWstart():
     #
     # OSX: ipfw add 1000 fwd 127.0.0.1,8080 tcp from any to 127.0.0.1 dst-port 80 in via lo0
 
+    #
+    # We need to know our interface name.
+    #
+    # Unless ml.interface has been set, let's set it to whatever interface you take to get to your
+    # default route.
+    #
+
+    (interface,router_ip) = find_my_default_router_and_interface()
+
     # Run ipfw list, so we can look for a rule that starts with 01000
     ipfw_cmd=os.popen("/sbin/ipfw list","r")
     ipfw_lines=ipfw_cmd.readlines()
@@ -44,11 +144,11 @@ def redirectIPFWstart():
 
     found_line=0
     for line in ipfw_lines:
-        if re.match(r"^01000 fwd 127\.0\.0\.1\,80 tcp from any to any dst-port 80 in via lo0",line):
+        if re.match(r"^01000 fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port 80 in via",line):
             found_line=1
 
     if not found_line:
-        ipfw_modify=os.popen("/sbin/ipfw add 1000 fwd 127.0.0.1,80 tcp from any to any dst-port 80 in via lo0")
+        ipfw_modify=os.popen("/sbin/ipfw add 1000 fwd 127.0.0.1,%s tcp from any to any dst-port 80 in via %s" % (ml.port,interface) )
 
     found_line
 
@@ -61,11 +161,11 @@ def redirectIPFWstop():
 
     found_line=0
     for line in ipfw_lines:
-        if re.match(r"^01000 fwd 127\.0\.0\.1\,80 tcp from any to any dst-port 80 in via en1",line):
+        if re.match(r"^01000 fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port 80 in via",line):
             found_line=1
 
     if found_line:
-        ipfw_modify=os.popen("/sbin/ipfw del 1000")
+        ipfw_modify=os.popen("/sbin/ipfw del 01000")
 
     found_line
 
@@ -157,86 +257,6 @@ def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac, my_broadcast):
         send(arp_response)
         sleep(3)
 
-def find_my_default_router_and_interface():
-
-    # On Linux, get the router IP address out of /proc/net/route
-    #
-    # You just need to translate the IP address in the third (gateway) column of the line that has eight 0's
-    # (00000000) in its second (destination) column.
-
-    # Use netstat -rn to figure out what the operating system's default router is and what
-    # its Internet interface is.
-
-    p = Popen("netstat -rn", shell=True, bufsize=100, stdin=PIPE, stdout=PIPE, close_fds=True)
-    (child_stdin, child_stdout) = (p.stdin, p.stdout)
-
-    #(stdin,stdout) = os.popen2("netstat -rn","r",100)
-    for line in child_stdout:
-        # BSD and OS X
-        if line.startswith("default"):
-            fields = line.split()
-            router_interface = fields[5]
-            router_ip = fields[1]
-            break
-        elif line.startswith("0.0.0.0"):
-            fields = line.split()
-            router_interface = fields[7]
-            router_ip = fields[1]
-            break
-    child_stdin.close()
-    child_stdout.close()
-
-    return (router_interface,router_ip)
-
-
-def find_mac_and_bcast(interface):
-    # Run ifconfig for the named interface.
-    ml.jjlog.debug("Trying to find mac for interface %s\n" % interface)
-    p = Popen("ifconfig %s" % interface, shell=True, bufsize=100, stdin=PIPE, stdout=PIPE, close_fds=True)
-    (child_stdin, child_stdout) = (p.stdin, p.stdout)
-
-    # Just grab the line(s) that have a MAC address on them.
-    if sys.platform == r"darwin":
-        mac_line_pattern = "ether "
-        bcast_line_pattern = r"broadcast "
-    elif sys.platform == r"linux2":
-        mac_line_pattern = r"HWaddr "
-        bcast_line_pattern = r"Bcast:"
-
-    ifconfig_lines = child_stdout.readlines()
-    ether_lines = [ line for line in ifconfig_lines if line.find(mac_line_pattern) >= 0 ]
-    bcast_lines = [ line for line in ifconfig_lines if line.find(bcast_line_pattern) >= 0]
-
-    # If there are not MAC address lines, we're busted.
-    if ether_lines == [] or bcast_lines == []:
-        # Warn the user that we can't arpspoof if there are no interfaces
-        ml.jjlog.debug( "    WARNING: cannot determine MAC or broadcast address for interface %s " % interface)
-        ml.jjlog.debug( "    ARP spoofing deactivated.")
-        print "find_mac routine failed.\n"
-        return("NONE","NONE")
-    else:
-        # First, find the MAC address portion of the ether/HWaddr line
-        etherline = ether_lines.pop()
-        mac_offset = etherline.find(mac_line_pattern) + len(mac_line_pattern)
-        mac_address = etherline[mac_offset:].rstrip("\r\n ")
-
-        # Now, do the same for broadcast
-        bcast_line = bcast_lines.pop()
-        bcast_offset = bcast_line.find(bcast_line_pattern) + len(bcast_line_pattern)
-
-        # Here's where things differ by plaform.  The bcast address isn't the last thing on
-        # the line on Linux
-        if sys.platform == r"linux2":
-            bcast_line = bcast_line[bcast_offset:]
-            bcast_end = bcast_line.find(" ")
-            bcast_address = bcast_line[:bcast_end]
-        else:
-            bcast_address = bcast_line[bcast_offset:].rstrip("\r\n ")
-
-        ml.jjlog.debug("Found MAC address %s and broadcast address %s!\n" % (mac_address,bcast_address) )
-
-        return(mac_address,bcast_address)
-
 
 def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_host="defaultrouter"):
     """This routine sets up ARP spoofing to get traffic on the local LAN to our
@@ -261,14 +281,16 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     # router.
 
     if (interface == "defaultroute"):
-        interface = router_interface
+        ml.interface = router_interface
+    else:
+        ml.interface = interface
     if (impersonated_host == "defaultrouter"):
         impersonated_host = router_ip
 
     # Now, let's set up to send ARP replies either to a specifically-named target
     # or to everyone on the network except the default router.
 
-    (my_mac,my_broadcast) = find_mac_and_bcast(interface)
+    (my_mac,my_broadcast) = find_mac_and_bcast(ml.interface)
 
     if my_mac == "NONE":
         exit(1)
@@ -281,10 +303,11 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     pid = os.fork()
 
     if pid:
-        ml.jjlog.debug("Forking to handle arpspoofing\n")
+        ml.jjlog.debug("Forking to handle arpspoofing via process %d\n" % pid)
 
         # Let's add this process to a list of child processes that we will need to
         # explicitly shut down.
+
         ml.child_pids_to_shutdown.append(pid)
 
     # For the child...
@@ -292,7 +315,7 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
         # Spoof away, Mr McManis
 
         # Lock this to arpspoof for now
-        print "Temporary - lockng to arpspoof for now\n"
+        print "Starting arpspoof program\n"
         os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
 
         try:

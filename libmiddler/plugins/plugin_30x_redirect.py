@@ -36,6 +36,7 @@ def doResponse(session, request_header, response_header, data):
 
           # Make sure we are only doing this on a 200 message.
           if response_code != "200":
+              ml.jjlog.debug("Response code was %s, not 200, so we won't inject here\n" % response_code)
               return(response_header, data, changed, stop)
 
 
