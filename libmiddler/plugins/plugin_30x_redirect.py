@@ -19,9 +19,9 @@ def doResponse(session, request_header, response_header, data):
 
   # Check to see if we've got the right target site
 
-  target = "www.cnn.com"
+  target = "www.foxnews.com"
   request_match = (("Host",target),)
-  redirect_url = "http://www.foxnews.com"
+  redirect_url = "http://www.cnn.com"
 
   if header.headertest(request_header,request_match):
 
