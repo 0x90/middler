@@ -142,6 +142,8 @@ def redirectIPFWstart():
     ipfw_lines=ipfw_cmd.readlines()
     ipfw_cmd.close()
 
+    # TODO: Refactor this and its analogues to handle multiple ports.
+
     found_line=0
     for line in ipfw_lines:
         if re.match(r"^01000 fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port 80 in via",line):
@@ -225,6 +227,10 @@ def redirectIPTablesStop():
 def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac, my_broadcast):
     from scapy.all import ARP,IP,send,srp,sr1,conf
 
+    # Note that we're using scapy, so the ARP spoof shutdown code knows it needs to send
+    # corrective ARP replies.
+    ml.arpspoof_via_scapy = 1
+
     # Turn off scapy's verbosity?
     conf.verb=0
 
@@ -297,8 +303,15 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
 
     # TODO-Med: Allow the user to submit a list of interfaces.
 
+
+    # Set a variable that tracks whether we used scapy
+    ml.arpspoof_via_scapy = 0
+
     # We'll fork this part off, so it can run for a long time without slowing
     # everything else down.
+
+    # TODO: move this fork to the scapy routine, since the Popen call for an
+    #       external arpspoof program is a fork already.
 
     pid = os.fork()
 
@@ -315,20 +328,23 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
         # Spoof away, Mr McManis
 
         # Lock this to arpspoof for now
-        print "Starting arpspoof program\n"
-        os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
+
+        #os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
+        #ml.arpspoof_process = Popen( ["arpspoof",impersonated_host], shell=True, close_fds = True )
+        #call( ["arpspoof %s" % (impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
 
         try:
             # Try to use scapy for this.
             import scapy
+
             arpspoof_via_scapy(impersonated_host,target_host,my_mac,my_broadcast)
 
         except ImportError:
             # If scapy isn't present, let's use dsniff's arpspooof program
             print "Arpspoofing requires either scapy or dsniff's arpspoof program.\n"
-            print "Trying arpspoof command.\n"
+            print "Could not import scapy - trying arpspoof command.\n"
 
-            os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
+            call( ["arpspoof %s" % (impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
 
 
     ##############################
@@ -373,12 +389,25 @@ def start():
     # Now start the arpspoofing
     set_up_arpspoofing()
 
+def stop_arpspoofing():
+
+    # Deactivate ARP spoofing.
+
+    # TODO: If we used scapy, send out three ARP replies with the impersonated_host's
+    #       real MAC address.  For now, don't worry about it.  ARP caches recover quickly.
+
+    #if ml.arpspoof_via_scapy:
+    pass
+
+
 def stop():
 
     """Stops The Middler host's routing and launches the function to remove rules from the
        operating system's firewall that re-routed any packets destined for middled protocols' ports."""
 
     ml.jjlog.debug("Entered stopRedirection()")
+
+    stop_arpspoofing()
 
     if sys.platform == "darwin":
 
