@@ -225,7 +225,8 @@ def redirectIPTablesStop():
 ####################################################################################################
 
 def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac, my_broadcast):
-    from scapy.all import ARP,IP,send,srp,sr1,conf
+    #from scapy.all import ARP,IP,send,srp,sr1,conf
+    from scapy import ARP,IP,send,srp,sr1,conf
 
     # Note that we're using scapy, so the ARP spoof shutdown code knows it needs to send
     # corrective ARP replies.

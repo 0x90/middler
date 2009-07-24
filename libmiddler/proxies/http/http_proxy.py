@@ -644,8 +644,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     lvalue = lvalue.capitalize()
                     rvalue = header[1]
                     #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
-                    j.putheader(lvalue,rvalue[0:-1])
-                    #print "Just inserted header %s: %s" % ( header[0],rvalue[0:-1])
+                    j.putheader(lvalue,rvalue)
+                    print "Just inserted header %s: %s" % ( lvalue,rvalue)
 
                 j.endheaders()
                 j.send(request_data)
