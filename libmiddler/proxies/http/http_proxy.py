@@ -6,6 +6,7 @@ import libmiddler as ml
 
 from httplib import *
 from socket import *
+from string import *
 import os, signal, SocketServer, select, sys, Cookie
 import re, urllib,time
 import threading, thread
@@ -642,7 +643,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 for header in request_headers[1:]:
                     lvalue = header[0]
                     lvalue = lvalue.capitalize()
-                    rvalue = header[1]
+                    # Handle \r and \n's getting added to later header fields.
+                    rvalue = ""
+                    if rfind(header[1],"\r\n") != -1:
+                        rvalue=header[1][0:-2]
+                    elif rfind(header[1],"\n") != -1:
+                        rvalue=header[1][0:-1]
+                    else:
+                        rvalue = header[1]
                     #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
                     j.putheader(lvalue,rvalue)
                     print "Just inserted header %s: %s" % ( lvalue,rvalue)
