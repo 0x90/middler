@@ -630,12 +630,12 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             modified_headers = []
 
             # Open a connection to the desired server and send request
-
+            #send_request(desthostname,port,method,url,request_headers)
             try:
                 port = 80
                 ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
                 j=HTTPConnection("%s:%d" % (desthostname,port) )
-                j.putrequest(method,url,"skip_host")
+                j.putrequest(method,url,skip_host=True,skip_accept_encoding=True)
                 #print "\n=========\nRequest going out:\n"
                 #print("Request as follows: %s %s\n" % (method,url))
     # Switch in the original headers.
@@ -653,14 +653,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                         rvalue = header[1]
                     #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
                     j.putheader(lvalue,rvalue)
-                    print "Just inserted header %s: %s" % ( lvalue,rvalue)
+                    #print "Just inserted header %s: %s" % ( lvalue,rvalue)
 
                 j.endheaders()
                 j.send(request_data)
                 #if request_data:
                 #  print ("\n%s\n" % request_data )
 
-    # Now get a response and take the parsing for free!
+                # Now get a response and take the parsing for free!
                 response_object=j.getresponse()
 
             except:
@@ -671,8 +671,9 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 #ml.jjlog.debug("Just sent modified request: \n%s" % modified_request)
                 #ml.jjlog.debug("Just sent modified request:\n%s" % modified_request)
 
-                # Now get data from the server
-    # Turn the socket into a file thing.
+            #
+            # Now parse the data from the server
+            #
 
             # Parse the response
             modified_response=""
@@ -680,6 +681,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Now parse one line at a time
             content_type_is_image = 0
 
+            # Build a response string.
             http_version = "HTTP/%s.%s" % (str(response_object.version)[0],str(response_object.version)[1])
             response_code_line = "%s %s %s" % (http_version,str(response_object.status),str(response_object.reason))
             #print ("Got response code %s\n" % response_object.status)
@@ -727,7 +729,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             self.current_user, response_headers, response_data = self.doResponse(self.current_user, request_headers, response_headers, response_data)
             ml.jjlog.debug("after plugins, response headers are %s\n\n" % response_headers )
 
-            #    GREAT! Now let's build our reply.    TODO-med: Make SSL changes happen prior to this.
+            # TODO-med: Make SSL changes happen prior to this? Via a plugin or engine?
             # Caught the bug!!!!
             #
             # modified_response_temp was built without adding the rets to the first line!!!!
