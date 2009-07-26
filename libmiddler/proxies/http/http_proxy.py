@@ -70,6 +70,7 @@ prefix["cookie"] = "Cookie"
 prefix["connection"] = "Connection"
 prefix["proxyconnection"] = "Proxy-Connection"
 prefix["acceptencoding"] = "Accept-Encoding"
+prefix["contentlength"] = "Content-Length"
 
 
 # Pre-compute the lengths of the prefix (substring matches) to speed parsing.
@@ -479,6 +480,15 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 print "ERROR: first readline() on the request failed!\n"
                 self.finish()
 
+            #
+            try:
+                method, url, HTTPprotocol = line.split(' ')
+
+            except ValueError:
+                print ("ERROR: Failure condition while separating out the parts of line by spaces - method was %s, URL was %s, line was:%s\n" % (method,url,line) )
+                exit(1)
+
+
             request_headers = [ ("Request",line) ]
 
             try:
@@ -494,12 +504,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 ml.jjlog.debug("Probably just finished reading request header")
 
             #### Handle Header-analysis
-            try:
-                method, part2 = request_headers[0][1].split(' ',1)
-                url, HTTPprotocol = part2.rsplit(' ',1)
-            except ValueError:
-                print ("ERROR: Failure condition while separating out the parts of request_headers[0][1] by spaces - method was %s, URL was %s, header was:\n%s\n" % (method,URL,request_headers[0][1]) )
-                exit(1)
 
             # Shut this down probably.  Using explicit proxy means not knowing which kind of request!!!!
 
@@ -588,6 +592,9 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                         # So the following line is commented out.
                         # modified_request = modified_request + line
 
+                elif header == prefix["contentlength"]:
+                    self.content_length = value
+
                 elif header == prefix["acceptencoding"]:
                     acceptencoding = value
                     #self.client_headers["acceptencoding"] = acceptencoding
@@ -613,8 +620,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             try:
                 if method == "POST":
-                    request_data = self.rfile.read(1000000)
-                    print "Request data was %s\n" % request_data
+                    request_data = self.rfile.read(int(self.content_length))
+
                     #ml.jjlog.debug("done reading POST data: \n%s"%request_data)
                 else:
                     request_data = ""
@@ -667,6 +674,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
                 # Now get a response and take the parsing for free!
                 response_object=j.getresponse()
+                if response_object.status in ( 200,301,307 ):
+                    #ml.jjlog.debug("Request to http://%s/%s returned response code %d" %(desthostname,url,response_object.status ))
+                    pass
+                elif response_object.status in ( 500 ):
+                    ml.jjlog.debug("Request to http://%s/%s returned response code %d" %(desthostname,url,response_object.status ))
+
+                else:
+                    ml.jjlog.debug("Request to http://%s/%s returned response code %d" %(desthostname,url,response_object.status ))
 
             except:
                 ml.jjlog.debug("Connection failed to host %s\n" % desthostname)
@@ -745,6 +760,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Remove the first item from response_headers, since it's our Response Code and reason
             # psuedo-header.  We can make this the first line, but it needs to have only the rvalue.
             modified_response_temp.append(response_headers.pop(0)[1])
+
 
             for header_idx in xrange(1,len(response_headers)):
                 modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
