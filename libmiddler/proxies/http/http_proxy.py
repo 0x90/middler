@@ -470,12 +470,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             #                     line.
 
             #print("self.rfile is the following kind of object %s\n" % str(type(self.rfile)) )
+            line = ""
             try:
                 line = self.rfile.readline()
                 #sys.stdout.write(line)
                 #sys.stdout.write(r"\r\n")
             except:
                 print "ERROR: first readline() on the request failed!\n"
+                self.finish()
 
             request_headers = [ ("Request",line) ]
 
