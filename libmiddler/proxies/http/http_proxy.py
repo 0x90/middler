@@ -496,12 +496,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 method, part2 = request_headers[0][1].split(' ',1)
                 url, HTTPprotocol = part2.rsplit(' ',1)
             except ValueError:
-                print ("ERROR: Failure condition while separating out the parts of request_headers[0][1] by spaces - header was:\n%s\n" % (request_headers[0][1]) )
+                print ("ERROR: Failure condition while separating out the parts of request_headers[0][1] by spaces - method was %s, URL was %s, header was:\n%s\n" % (method,URL,request_headers[0][1]) )
                 exit(1)
 
-            if method == "CONNECT":
+            # Shut this down probably.  Using explicit proxy means not knowing which kind of request!!!!
+
+            #if method == "CONNECT":
                 #ml.jjlog.debug("Found a CONNECT method.    Changing to GET.\n")
-                method = "GET"
+            #    method = "GET"
                 # TODO-Low: Parse CONNECT methods better so we allow people to use
                 # this as a positive proxy.
 
@@ -609,7 +611,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             try:
                 if method == "POST":
-                    request_data = self.rfile.readline()
+                    request_data = self.rfile.read(1000000)
+                    print "Request data was %s\n" % request_data
                     #ml.jjlog.debug("done reading POST data: \n%s"%request_data)
                 else:
                     request_data = ""
@@ -709,7 +712,6 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             for header_idx in xrange(1, len(unordered_headers)):
                 try:
                     hdr = unordered_headers[header_idx]
-                    #print repr(hdr)
                     header, value = hdr
                     response_headers.append([header.capitalize(),value])
                 except:
@@ -734,7 +736,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             #
             # modified_response_temp was built without adding the rets to the first line!!!!
 
-            rets = "\n"
+            rets = "\r\n"
             #response_code_line = ( "%s%s" % (response_headers[0][1] , rets) )
             modified_response_temp = []
 
