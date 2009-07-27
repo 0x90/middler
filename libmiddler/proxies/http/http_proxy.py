@@ -462,7 +462,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     hdr = unordered_headers[header_idx]
                     header, value = hdr
                     response_headers.append([header.capitalize(),value])
-                    print "%s: %s" % (header.capitalize(),value)
+                    
                 except:
                     print "Header parsing failing.\n"
                     self.finish()
