@@ -388,7 +388,8 @@ def start():
 
 
     # Now start the arpspoofing
-    set_up_arpspoofing()
+    if not ml.toggle_arpspoof_off:
+        set_up_arpspoofing()
 
 def stop_arpspoofing():
 

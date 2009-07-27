@@ -17,20 +17,13 @@ ml.child_pids_to_shutdown = []
 def parseCommandLineFlags():
 
     from optparse import OptionParser
-    parser = OptionParser(usage="%prog [-i ip] [-p port] [--sslstrip]", version="%prog 1.0")
-    parser.add_option("-i", "--ip", dest="ip",
-                                    help="listen on IP",default="0.0.0.0")
+    parser = OptionParser(usage="%prog [-p port] ", version="%prog 1.0")
+
     parser.add_option("-p", "--port", dest="port",
-                                    help="listen on port",default="80")
-    parser.add_option("-s", "--sslstrip",
-                                    action="store_false", dest="sslstrip", default=False,
-                                    help="change HTTPS links to HTTP, while sending data to the server over HTTPS")
-    parser.add_option("-u", "--url", dest="url",
-                                    help="URL to inject", default="")
-    parser.add_option("-a", "--autopwn", dest="autopwn",
-                                    help="auto-p0wn browsers via Metasploit")
-    parser.add_option("-r", "--redirect_via_arpspoof", dest="toggle_arpspoof",
-                                    help="activate ARP spoofing to send out ARP replies claiming the router's IP address")
+                                    help="HTTP should listen on this port",default="80")
+    parser.add_option("-A", "--arpspoof_off", action="store_true", dest="toggle_arpspoof_off", default=False,
+                                    help="turn off ARP spoofing, so The Middler doesn't broadcast ARP replies claiming the router's IP address")
+    
     (options,args)=parser.parse_args()
 
     return (options,args)
@@ -51,14 +44,10 @@ if __name__ == '__main__':
 
     (options,args) = parseCommandLineFlags()
 
-    ml.hostname = options.ip
+    ml.toggle_arpspoof_off = options.toggle_arpspoof_off
     ml.port = int(options.port)
 
-    # Will we be removing SSL from the response?
-    ml.proxies.http.http_proxy.MiddlerHTTPProxy.remove_ssl_from_response = 0
-    if options.sslstrip:
-        ml.proxies.http.http_proxy.MiddlerHTTPProxy.remove_ssl_from_response = 1
-
+    ml.hostname = "0.0.0.0"
 
     ###################
     # Signal handling #
