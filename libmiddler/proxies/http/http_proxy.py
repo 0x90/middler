@@ -289,7 +289,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             #
             try:
-                method, url, HTTPprotocol = line.split(' ')
+                method, url, HTTPprotocol = line.split(' ',2)
 
             except ValueError:
                 print ("ERROR: Failure condition while separating out the parts of line by spaces - method was %s, URL was %s, line was:%s\n" % (method,url,line) )
@@ -412,12 +412,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
                 j.endheaders()
                 j.send(request_data)
-                #if request_data:
-                #  print ("\n%s\n" % request_data )
 
                 # Now get a response and take the parsing for free!
                 response_object=j.getresponse()
-                if response_object.status in ( 200,301,307 ):
+                if response_object.status in ( 200,301,302,303,307):
                     #ml.jjlog.debug("Request to http://%s/%s returned response code %d" %(desthostname,url,response_object.status ))
                     pass
                 elif response_object.status in ( 500 ):
@@ -459,11 +457,12 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             # Now add on the rest of the response headers.
             unordered_headers = response_object.getheaders()
-            for header_idx in xrange(1, len(unordered_headers)):
+            for header_idx in xrange(0, len(unordered_headers)):
                 try:
                     hdr = unordered_headers[header_idx]
                     header, value = hdr
                     response_headers.append([header.capitalize(),value])
+                    print "%s: %s" % (header.capitalize(),value)
                 except:
                     print "Header parsing failing.\n"
                     self.finish()
@@ -495,11 +494,13 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             modified_response_temp.append(response_headers.pop(0)[1])
 
 
-            for header_idx in xrange(1,len(response_headers)):
+            for header_idx in xrange(0,len(response_headers)):
                 modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
+            #print "modified response is %s" % modified_response_temp
             modified_response_temp.append(rets)     #rets is the *identified* bytes used as CRLF
             modified_response_temp.append(response_data)
             modified_response = "".join(modified_response_temp)
+
 
             # Send the response back to the client
             #ml.jjlog.debug("Preparing to send modified response to client: %s" % modified_response)
