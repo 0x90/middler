@@ -55,7 +55,7 @@ def doResponse(session, request_header, response_header, data):
           changed = 1
 
           ### Correct the content-length.
-          header.headerfix(response_header, "Content-Length", str(len(data)) + '\r\n')
+          header.headerfix(response_header, "Content-Length", str(len(data)))
 
           # We have changed the header and we don't want any other plugins to touch it.
           # TODO: Decide on how to do priority/dependencies/ordering so redirects go first.
