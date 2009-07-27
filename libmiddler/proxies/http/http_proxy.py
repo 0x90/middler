@@ -621,7 +621,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             try:
                 if method == "POST":
-                    request_data = self.rfile.read(int(self.client_headers["content_length"]))
+                    request_data = self.rfile.read(int(self.client_headers["content-length"]))
 
                     #ml.jjlog.debug("done reading POST data: \n%s"%request_data)
                 else:
