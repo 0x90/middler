@@ -70,7 +70,7 @@ prefix["cookie"] = "Cookie"
 prefix["connection"] = "Connection"
 prefix["proxyconnection"] = "Proxy-Connection"
 prefix["acceptencoding"] = "Accept-Encoding"
-prefix["contentlength"] = "Content-Length"
+prefix["content-length"] = "Content-Length"
 
 
 # Pre-compute the lengths of the prefix (substring matches) to speed parsing.
@@ -592,8 +592,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                         # So the following line is commented out.
                         # modified_request = modified_request + line
 
-                elif header == prefix["contentlength"]:
-                    self.content_length = value
+                elif header == prefix["content-length"]:
+                    self.client_headers["content-length"] = value
 
                 elif header == prefix["acceptencoding"]:
                     acceptencoding = value
@@ -621,7 +621,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             try:
                 if method == "POST":
-                    request_data = self.rfile.read(int(self.content_length))
+                    request_data = self.rfile.read(int(self.client_headers["content_length"]))
 
                     #ml.jjlog.debug("done reading POST data: \n%s"%request_data)
                 else:
