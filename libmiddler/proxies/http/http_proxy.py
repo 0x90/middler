@@ -37,7 +37,7 @@ prefix["cookie"] = "Cookie"
 prefix["connection"] = "Connection"
 prefix["proxyconnection"] = "Proxy-Connection"
 prefix["acceptencoding"] = "Accept-Encoding"
-prefix["content-length"] = "Content-Length"
+prefix["content-length"] = "Content-length"
 
 
 # Pre-compute the lengths of the prefix (substring matches) to speed parsing.
@@ -319,18 +319,18 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 #print index
                 #print request_headers[index]
                 header, value = request_headers[index]
-                if header == prefix["host"]:
+                if lower(header) == lower(prefix["host"]):
                     desthostname = value.strip()
                     #modified_request = modified_request + line
 
-                elif header == prefix["connection"]:
+                elif lower(header) == lower(prefix["connection"]):
                     connection = value
                     self.client_headers["connection"] = connection
                     if connection == "Close":
                         close_requested = 1
                             #ml.jjlog.debug("Encountered a Connection: close from browser - it doesn't want keepalive.")
 
-                elif header == prefix["proxyconnection"]:
+                elif lower(header) == lower(prefix["proxyconnection"]):
                     proxyconnection = value
 
                     self.client_headers["proxyconnection"] = proxyconnection
@@ -342,10 +342,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                         # So the following line is commented out.
                         # modified_request = modified_request + line
 
-                elif header == prefix["content-length"]:
+                elif lower(header) == lower(prefix["content-length"]):
                     self.client_headers["content-length"] = value
 
-                elif header == prefix["acceptencoding"]:
+                elif lower(header) == lower(prefix["acceptencoding"]):
                     acceptencoding = value
                     #self.client_headers["acceptencoding"] = acceptencoding
                     # TODO: Make this a user option
@@ -415,10 +415,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
                 # Now get a response and take the parsing for free!
                 response_object=j.getresponse()
-                if response_object.status in ( 200,301,302,303,307):
+                if response_object.status in [ 200,301,302,303,307 ]:
                     #ml.jjlog.debug("Request to http://%s/%s returned response code %d" %(desthostname,url,response_object.status ))
                     pass
-                elif response_object.status in ( 500 ):
+                elif response_object.status in [ 500 ]:
                     ml.jjlog.debug("Request to http://%s/%s returned response code %d" %(desthostname,url,response_object.status ))
 
                 else:
@@ -461,7 +461,14 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                 try:
                     hdr = unordered_headers[header_idx]
                     header, value = hdr
-                    response_headers.append([header.capitalize(),value])
+                    if lower(header) == "set-cookie":
+                       cookies = response_object.msg.getallmatchingheaders('Set-Cookie')
+                       for x in cookies:
+                          header, value = x.split(": ",2)
+                          value = value.rstrip("\n\r")
+                          response_headers.append([header.capitalize(),value])
+                    else:
+                       response_headers.append([header.capitalize(),value])
                     
                 except:
                     print "Header parsing failing.\n"
@@ -491,7 +498,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             # Remove the first item from response_headers, since it's our Response Code and reason
             # psuedo-header.  We can make this the first line, but it needs to have only the rvalue.
-            modified_response_temp.append(response_headers.pop(0)[1])
+            modified_response_temp.append(response_headers.pop(0)[1] + rets)
 
 
             for header_idx in xrange(0,len(response_headers)):
