@@ -39,7 +39,7 @@ def doResponse(session, request_header, response_header, data):
 
           # Check the response code line.
           response_code_line = response_header[0][1]
-          (protover,response_code,reason) = response_code_line.split(" ")
+          (protover,response_code,reason) = response_code_line.split(" ",2)
 
           ml.jjlog.debug("Response code line had these elements --%s-- --%s-- --%s\n" % (protover,response_code,reason) )
 
