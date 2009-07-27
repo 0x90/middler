@@ -42,5 +42,7 @@ def doResponse(session, request_header, response_header, data):
     print("User has been redirected to " + redirect_url)
 
   ### RETURN DATA
-  header.headerfix(response_header, "Content-Length", str(len(data)) + '\r\n')
+  if changed:
+    header.headerfix(response_header, "Content-Length", str(len(data)))
+
   return(response_header, data, changed, stop)
