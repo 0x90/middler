@@ -152,7 +152,7 @@ class Middler_HTTP_Proxy(SocketServer.StreamRequestHandler):
 
     def __init__(self, request, client_address, server):
         self.client_headers = {}
-        self.current_user = MiddlerHTTPProxy.sessions.getSession(client_address)
+        self.current_user = Middler_HTTP_Proxy.sessions.getSession(client_address)
         #ml.jjlog.debug( (request, client_address, server, dir(self))
         SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
 
