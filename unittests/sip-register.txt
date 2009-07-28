@@ -1,0 +1,13 @@
+REGISTER sip:p.voncp.com:10000 SIP/2.0
+From: "301-591-4091"<sip:13015914091@p.voncp.com:10000;user=phone>;tag=c0a800fd-13c5-4a1244f7-19823-2775
+To: <sip:13015914091@p.voncp.com:10000;user=phone>
+Call-ID: 9452ce3c-17728-1242711202-1157-128603417300868100000000-1@192.168.0.253
+CSeq: 8 REGISTER
+Via: SIP/2.0/UDP 192.168.0.253:5061;branch=z9hG4bK-4a1244f7-19823-230a
+User-Agent: <Motorola VT1000 mac: 00111A521F42 sw:VT20_02.03.00_A ln:1 cfg:1242651125769/1002286009>
+Max-Forwards: 70
+Supported: replaces
+Contact: <sip:13015914091@192.168.0.253:5061;transport=UDP;user=phone>
+Expires: 900
+Content-Length: 0
+

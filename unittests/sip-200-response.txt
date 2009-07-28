@@ -1,0 +1,14 @@
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 192.168.0.50:64064;received=75.160.105.73;branch=z9hG4bK-d87543-7fc2a95c18724d01-1--d87543-;rport=64064
+Record-Route: <sip:198.65.166.131;lr;ftag=c68b5a63>
+From: <sip:17470848985@proxy01.sipphone.com>;tag=c68b5a63
+To: <sip:+12068837526@proxy01.sipphone.com>;tag=as56514440
+Call-ID: 036c935f87608b5f1242641808@V2FsbEUubG9jYWw.
+CSeq: 3 BYE
+User-Agent: SIPCallProxy1
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY
+Contact: <sip:12068837526@130.94.88.94:5060;nat=yes>
+Content-Length: 0
+X-Asterisk-HangupCause: Normal Clearing
+RemoteIP: 130.94.88.94
+
