@@ -72,12 +72,12 @@ class Sessions(dict):
 
 # Check sys.modules['middler']'s directory for a plugins/ directory.
 
-PLUGINS = []
-if (not PLUGINS or len(PLUGINS) == 0):
+HTTP_PLUGINS = []
+if (not HTTP_PLUGINS or len(HTTP_PLUGINS) == 0):
 
-    ###### This code loads the fileparsers into the PLUGINS list
-    parserdir = "%s%splugins"%(os.sep.join(sys.modules['libmiddler'].__file__.split(os.sep)[:-1]), os.sep)
-    #parserdir = "%s%splugins"%(os.sep.join(sys.modules['libmiddler'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
+    ###### This code loads the fileparsers into the HTTP_PLUGINS list
+    parserdir = "%s%splugins%shttp"%(os.sep.join(sys.modules['libmiddler'].__file__.split(os.sep)[:-1]), os.sep, os.sep)
+    #parserdir = "%s%splugins%shttp"%(os.sep.join(sys.modules['libmiddler'].__file__.split(os.sep)[:-1]), os.sep) + "/enabled"
     ml.jjlog.debug(">>plugindir: %s<<"%parserdir)
 
     filename = None
@@ -87,8 +87,8 @@ if (not PLUGINS or len(PLUGINS) == 0):
         # start with _ to our list of plugins.
 
             if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
-        #ml.jjlog.debug(">>Trying to load plugin from libmiddler.plugins.enabled.%s"%filename[:-3] )
-                PLUGINS.append(__import__("libmiddler.plugins.%s"%filename[:-3], None, None, "libmiddler.plugins"))
+                HTTP_PLUGINS.append(__import__("libmiddler.plugins.http.%s"%filename[:-3], None, None, "libmiddler.plugins.http"))
+
         except:
             ml.jjlog.debug("Error loading plugin %s"%filename)
             x,y,z = sys.exc_info()
@@ -98,18 +98,18 @@ if (not PLUGINS or len(PLUGINS) == 0):
 # If we haven't found the plugins/ directory yet, check the current directory
 # for a plugins/ directory.
 
-if (not PLUGINS or len(PLUGINS) == 0):
+if (not HTTP_PLUGINS or len(HTTP_PLUGINS) == 0):
 
-    ###### This code loads the fileparsers into the PLUGINS list
+    ###### This code loads the fileparsers into the HTTP_PLUGINS list
     #ml.jjlog.debug( os.path.abspath(os.curdir)
-    parserdir = "./plugins"
+    parserdir = "./plugins/http/"
     ml.jjlog.debug(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
     filename = None
     try:
         for filename in  os.listdir(parserdir):
             try:
                 if (len(filename) > 3 and filename[0] != "_" and filename[-3:] == ".py"):
-                    PLUGINS.append(__import__("libmiddler.plugins.%s"%filename[:-3], None, None, "libmiddler.plugins"))
+                    HTTP_PLUGINS.append(__import__("libmiddler.plugins.http.%s"%filename[:-3], None, None, "libmiddler.plugins.http"))
             except:
                 ml.jjlog.debug("Error loading plugin %s"%filename)
                 x,y,z = sys.exc_info()
@@ -142,7 +142,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 # Set up the HTTP proxy - we'll have more protocols soon.
 #
 
-class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
+class Middler_HTTP_Proxy(SocketServer.StreamRequestHandler):
 #class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
     # Set up a sessions() data structure for tracking information about
@@ -167,8 +167,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
     # before we hand the data back to the user.
 
     def doRequest(self, session, request_headers, data):
-        global PLUGINS
-        for plugin in PLUGINS:
+        global HTTP_PLUGINS
+        for plugin in HTTP_PLUGINS:
             try:
                 ml.jjlog.debug("executing plugin %s" % plugin)
                 request_headers, data, changed, stop = plugin.doRequest(session, request_headers, data)
@@ -193,8 +193,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
     # data) to the plugins.
 
     def doResponse(self, session, request_headers, response_headers, data):
-        global PLUGINS
-        for plugin in PLUGINS:
+        global HTTP_PLUGINS
+        for plugin in HTTP_PLUGINS:
             try:
                 response_headers, data, changed, stop = plugin.doResponse(session, request_headers, response_headers, data)
                 if stop:
@@ -478,7 +478,7 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                           response_headers.append([header.capitalize(),value])
                     else:
                        response_headers.append([header.capitalize(),value])
-                    
+
                 except:
                     print "Header parsing failing.\n"
                     self.finish()
