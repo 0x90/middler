@@ -10,6 +10,7 @@ from string import *
 import os, signal, SocketServer, select, sys, Cookie
 import re, urllib,time
 import threading, thread
+import urlparse
 
 #### Globals
 
@@ -388,19 +389,18 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
             # Open a connection to the desired server and send request
             #send_request(desthostname,port,method,url,request_headers)
 
-            # should probably use the host from here too...
+            # TODO-low: should probably use the host from here too...
             if url[0:7] == "http://":
-               import urlparse
                url_obj = urlparse.urlsplit(url)
-               print "URL: ", url
                path = url_obj.path
                if url_obj.query:
                   path += "?" + url_obj.query
                if url_obj.fragment:
                   path += "#" + url_obj.fragment
-               print "Path: ", path
             else:
                path = url
+            #print "URL: ", url
+            #print "Path: ", path
 
             try:
                 port = 80
@@ -513,9 +513,20 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                modified_response_temp.append(response_headers.pop(0)[1])
 
 
+            seen_content_length = 0
             for header_idx in xrange(0,len(response_headers)):
                 if response_headers[header_idx][0] == "X-cnection":
                    continue
+                if lower(response_headers[header_idx][0]) == "transfer-encoding":
+                   if lower(response_headers[header_idx][1]) == "chunked":
+                      response_headers[header_idx][0] = "Content-length"
+                      response_headers[header_idx][1] = len(response_data)
+                      seen_content_length = 1
+                   else:
+                      continue
+                if lower(response_headers[header_idx][0]) == "content-length":
+                   if seen_content_length:
+                      continue
                 modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
             #print "modified response is %s" % modified_response_temp
             modified_response_temp.append(rets)     #rets is the *identified* bytes used as CRLF
