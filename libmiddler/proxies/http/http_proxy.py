@@ -387,11 +387,26 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             # Open a connection to the desired server and send request
             #send_request(desthostname,port,method,url,request_headers)
+
+            # should probably use the host from here too...
+            if url[0:7] == "http://":
+               import urlparse
+               url_obj = urlparse.urlsplit(url)
+               print "URL: ", url
+               path = url_obj.path
+               if url_obj.query:
+                  path += "?" + url_obj.query
+               if url_obj.fragment:
+                  path += "#" + url_obj.fragment
+               print "Path: ", path
+            else:
+               path = url
+
             try:
                 port = 80
                 ml.jjlog.debug("Connecting HTTP to: %s:%d\n" % (desthostname,port))
                 j=HTTPConnection("%s:%d" % (desthostname,port) )
-                j.putrequest(method,url,skip_host=True,skip_accept_encoding=True)
+                j.putrequest(method,path,skip_host=True,skip_accept_encoding=True)
 
                 # Switch in the original headers.
 
@@ -399,14 +414,8 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
                     lvalue = header[0]
                     lvalue = lvalue.capitalize()
                     # Handle \r and \n's getting added to later header fields.
-                    rvalue = ""
-                    if rfind(header[1],"\r\n") != -1:
-                        rvalue=header[1][0:-2]
-                    elif rfind(header[1],"\n") != -1:
-                        rvalue=header[1][0:-1]
-                    else:
-                        rvalue = header[1]
-                    #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
+                    rvalue = header[1].rstrip("\r\n")
+                    #print ("%s: %s" % (lvalue,rvalue) )
                     j.putheader(lvalue,rvalue)
                     #print "Just inserted header %s: %s" % ( lvalue,rvalue)
 
