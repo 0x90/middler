@@ -498,7 +498,10 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             # Remove the first item from response_headers, since it's our Response Code and reason
             # psuedo-header.  We can make this the first line, but it needs to have only the rvalue.
-            modified_response_temp.append(response_headers.pop(0)[1])
+            if http_version == "HTTP/1.0":
+               modified_response_temp.append(response_headers.pop(0)[1] + rets)
+            else:
+               modified_response_temp.append(response_headers.pop(0)[1])
 
 
             for header_idx in xrange(0,len(response_headers)):
