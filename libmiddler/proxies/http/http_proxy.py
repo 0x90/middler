@@ -498,10 +498,12 @@ class MiddlerHTTPProxy(SocketServer.StreamRequestHandler):
 
             # Remove the first item from response_headers, since it's our Response Code and reason
             # psuedo-header.  We can make this the first line, but it needs to have only the rvalue.
-            modified_response_temp.append(response_headers.pop(0)[1] + rets)
+            modified_response_temp.append(response_headers.pop(0)[1])
 
 
             for header_idx in xrange(0,len(response_headers)):
+                if response_headers[header_idx][0] == "X-cnection":
+                   continue
                 modified_response_temp.append("%s: %s%s"% (response_headers[header_idx][0],response_headers[header_idx][1],rets))
             #print "modified response is %s" % modified_response_temp
             modified_response_temp.append(rets)     #rets is the *identified* bytes used as CRLF
