@@ -53,7 +53,6 @@ def parse_useragent(user_agent):
       developer_log ("UserAgent string we cannot yet parse:" + user_agent,"\n")
   return current_user
 
-
   #def parse_useragent (line)
 
     #unless $current_user["UserAgent"]
