@@ -361,7 +361,7 @@ class Middler_HTTP_Proxy(SocketServer.StreamRequestHandler):
 
             port = 80
             ml.jjlog.debug("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
-            print("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
+            #print("%s is requesting %s:%s" % (self.client_address[0], desthostname, port))
 
             try:
                 if method == "POST":

@@ -152,7 +152,7 @@ if __name__ == '__main__':
     import libmiddler.proxies.sip.sip_proxy
 
     # Now start up a SIP UDP proxy on 5060, 5061, 10000, and 64064
-    for udp_port in 5060, 5061, 10000, 64064:
+    for udp_port in 5060, 5061, 10000, 44642,64064:
         sip_udp_proxy = libmiddler.proxies.sip.sip_proxy.ThreadedUDPServer((ml.hostname,udp_port), libmiddler.proxies.sip.sip_proxy.Middler_SIP_UDP_Proxy)
         sip_udp_thread = threading.Thread(target=sip_udp_proxy.serve_forever)
         sip_udp_thread.setDaemon(True)

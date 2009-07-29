@@ -154,7 +154,7 @@ def redirectIPFWstart():
     # while proxy_port is the one on which we proxy that traffic.
 
     # First, put the SIP ports into the list.
-    ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
+    ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064],["udp",44642,44642] ]
     # Now add the HTTP ports
     ml.redirection_ports.append(["tcp",int(ml.port),80])
 
@@ -170,8 +170,8 @@ def redirectIPFWstart():
                 found_line=1
 
         if not found_line:
-            ipfw_modify=os.popen("/sbin/ipfw add $rule_number fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (proxy_port,dest_port,interface) )
-
+            ipfw_modify=os.popen("/sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (rule_number,proxy_port,dest_port,interface) )
+            print "DEBUG: Just ran /sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (rule_number,proxy_port,dest_port,interface)
         rule_number = rule_number + 1
 
 def redirectIPFWstop():
@@ -194,21 +194,8 @@ def redirectIPFWstop():
 
 def redirectIPTablesStart():
 
-    """This functions starts up the iptables forwarding so that as this machine routes traffic, it redirects port 80 traffic to itself."""
-
-    # Add a rule called MIDDLERNAT that forces any traffic destined for port 80 to go instead
-    # to the local port 80 on this system.
-
-    os.system("iptables -t nat -N MIDDLERNAT")
-    print "Redirecting port 80 packets to port " + str(ml.port) + "\n"
-    command = "iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports " + str(ml.port)
-    os.system(command)
-    #os.system("iptables -t nat -I MIDDLERNAT -p tcp --dport 80 -j REDIRECT --to-ports %d" % (ml.port) )
-    os.system("iptables -t nat -A PREROUTING -j MIDDLERNAT")
-
-def redirectIPTablesNewStart():
-    from netfilter.rule import Rule,Match,Target
-    from netfilter.table import Table
+    """This function starts up the iptables forwarding so that as this machine routes traffic,
+    it redirects traffic destined for specific ports to itself."""
 
     #
     # Create a list of ports we want to capture.
@@ -221,50 +208,27 @@ def redirectIPTablesNewStart():
     # First, put the SIP ports into the list.
     ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
     # Now add the HTTP ports
-    ml.redirection_ports.append(["tcp",int(ml.port),80])
+    ml.redirection_ports.append(["tcp",80,80])
 
-    # Access the iptables nat table.
-    nat_table = Table('nat')
-
-    # Build a rule to capture traffic destined for port 80.
     for port_tuple in ml.redirection_ports:
-        (proto,dest_port,proxy_port) = port_tuple
-        target = Target("REDIRECT","--to-ports %d" % proxy_port)
-        prerouting_rule = Rule(
-          protocol=proto,
-          matches=[Match('tcp', '--dport %d' % (dest_port) )],
-          jump=target)
-
-
-        nat_table.prepend_rule('PREROUTING', prerouting_rule)
-
-def redirectIPTablesNewStop():
-    from netfilter.rule import Rule,Match,Target
-    from netfilter.table import Table
-
-    # Access the iptables nat table.
-    nat_table = Table('nat')
-
-    # Build a rule to capture traffic destined for port 80.
-    for port_tuple in ml.redirection_ports:
-        (proto,dest_port,proxy_port) = port_tuple
-
-        # Rebuild the rule we build before.
-        target = Target("REDIRECT","--to-ports %d" % proxy_port)
-        prerouting_rule = Rule(
-          protocol=proto,
-          matches=[Match('tcp', '--dport %d' % (dest_port) )],
-          jump=target)
-
-        # Now remove this rule.
-        nat_table.delete_rule("PREROUTING",prerouting_rule)
+        #(proto,dest_port,proxy_port) = port_tuple
+        command = "iptables -t nat -I PREROUTING -p %s --dport %d -j REDIRECT --to-ports %d" % tuple(port_tuple)
+        print "Redirecting %s port %d to The Middler's proxy on localhost:%d" % tuple(port_tuple)
+        os.system(command)
 
 def redirectIPTablesStop():
 
-    # TODO-Medium: write a routine to find the jump to the MIDDLERNAT rule first, so we can entirely remove
-    # all traces of the MIDDLERNAT rule instead of just rendering it ineffective.
-    os.system("iptables -t nat -D MIDDLERNAT 1")
+    # Same logic as the start routine.
+    # First, put the SIP ports into the list.
+    ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
+    # Now add the HTTP ports
+    ml.redirection_ports.append(["tcp",80,80])
 
+    for port_tuple in ml.redirection_ports:
+        #(proto,dest_port,proxy_port) = port_tuple
+        command = "iptables -t nat -D PREROUTING -p %s --dport %d -j REDIRECT --to-ports %d" % tuple(port_tuple)
+        print "Removing redirection of %s port %d to The Middler's proxy on localhost:%d" % tuple(port_tuple)
+        os.system(command)
 
 
 ####################################################################################################
