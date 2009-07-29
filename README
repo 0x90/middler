@@ -2,10 +2,10 @@
 
 The Middler is a Man in the Middle tool to demonstrate protocol middling
 attacks. Led by Jay Beale, the project involves a team of authors including
-InGuardians agents Justin Searle and Matt Carpenter, as well as Open Source
-non-InGuardians employees Tim Craig and Brandon Edwards.  The Middler is 
-intended to man in the middle, or "middle" for short, every protocol for which
-we can create code.
+InGuardians agents Justin Searle and Matt Carpenter, as well as 
+non-InGuardians Open Sourcers Tim Craig and Brandon Edwards.  The Middler is 
+intended to man in the middle, or "middle," for short, every protocol for 
+which we can create code.
 
 In our first alpha release, we released an HTTP proxy built by Matt and Jay, 
 with introductory plug-ins by Justin and InGuardians agent Tom Liston.  The
