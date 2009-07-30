@@ -7,6 +7,10 @@ import proxies
 interface = ""
 redirection_ports = ()
 
+redirected_tcp_ports = []
+redirected_udp_ports = []
+
+router_ip = ""
 # IP address we're listening on, defaults to 0.0.0.0
 # hostname
 

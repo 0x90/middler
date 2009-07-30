@@ -80,7 +80,7 @@ if (not SIP_PLUGINS or len(SIP_PLUGINS) == 0):
 
     ###### This code loads the fileparsers into the SIP_PLUGINS list
     #ml.jjlog.debug( os.path.abspath(os.curdir)
-    parserdir = "./plugins"
+    parserdir = "./plugins/sip"
     ml.jjlog.debug(">> Had to set plugin directory relative to current dir - plugindir: %s<<"%parserdir)
     filename = None
     try:
@@ -154,12 +154,9 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
         # Let's store our IP address.
         (self.ip,self.port)  = server.server_address
-        print "Handling a new connection on port %s\n" % self.port
-
 
         # Let's see if there is a session associated with this.
         #self.current_user = Middler_SIP_Proxy.SIP_Sessions.getSession(client_address)
-
 
         #ml.jjlog.debug( (request, client_address, server, dir(self))
         SocketServer.DatagramRequestHandler.__init__(self, request, client_address, server)
@@ -219,6 +216,8 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         # Break via apart into the protocol version (SIP/2.0) and the rest, which
         # contains the client address and port, the branch parameter and any other options.
 
+        sip_uri = sip_uri.rstrip("\r\n")
+        via_uri = via_uri.rstrip("\r\n")
         print "map_via_to_sipuri entered with SIPURI = %s and VIA = %s" % (sip_uri,via_uri)
         try:
             (protocolversion,internal_address_port_branch_options) = via_uri.split(None)
@@ -241,11 +240,11 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         # If we didn't find a :, end is -1.
         if colon != -1:
             internal_address = internal_address_port[0:colon]
-            internal_port = internal_address_port[colon+1:]
+            internal_port = int(internal_address_port[colon+1:])
         else:
             ml.jjlog.debug_log("Found no port in SIP URI %s\n" % via_rvalue)
             internal_address = internal_address_port
-            internal_port = "5060"
+            internal_port = 5060
 
         print "DEBUG: VIA showed internal IP:port to be %s : %s" % (internal_address,internal_port)
         # Checked this code - it does it right with Vonage.
@@ -300,6 +299,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
                 ml.child_pids_to_shutdown.append(pid)
 
             else:
+
                 ml.traffic_capture.set_up_arpspoofing(impersonated_host=internal_address)
                 while True:
                     pass
@@ -315,11 +315,24 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
         self.current_user = self.client_address[0]
 
+        # Store the source IP and port for the one packet this thread will handle.
+        self.source_ip = self.client_address[0]
+        self.source_port = int(self.client_address[1])
+
+        # Store the destination IP and port for our outgoing packet.
+        # We don't know what the original dest was, because iptables/ipfw both don't
+        # give this to us.
+
         self.dest_hostname = "" # var: desthostname stores the host we're trying to contact.
         self.dest_port = self.port
 
-        ml.jjlog.debug("Started a new thread to handle connection from %s!" % self.client_address[0])
-        print "Started a new thread to handle connection from %s on port %d!" % (self.client_address[0] , self.dest_port)
+        # Make sure we're tracking the ports we're already listening on.
+        if self.port not in Middler_SIP_UDP_Proxy.udp_ports:
+            Middler_SIP_UDP_Proxy.udp_ports.append(self.port)
+
+        print "\n\n---------START------------------------------------"
+        ml.jjlog.debug("Started a new thread to handle connection from %s:%d on our port %d!" % (self.source_ip,self.source_port,self.dest_port))
+        print "Started a new thread to handle connection from %s:%d on port %d!" % (self.source_ip,self.source_port,self.dest_port)
 
         ## var: client_headers{} stores relevant header values, to take effort off plug-in authors.
         #client_headers =    {}
@@ -420,7 +433,6 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         self.found_from = 0
 
         # Get the METHOD line from a request or the STATUS line from a response.
-        line = ""
         try:
             line = self.rfile.readline()
         except:
@@ -440,12 +452,16 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         # From line.
 
         # If it's a request, grab the method, as well as the destination hostname and port.
-        if line[-8:-4] == "SIP/":
+
+        line = line.rstrip("\r\n")
+        print "Looking at a line that reads %s" % line
+        #print "Request last line[-7:] is %s" % line[-7:]
+        if line[-7:] == "SIP/2.0":
             self.is_request = 1
             (self.method,self.request_uri,self.proto_ver) = line.split(None,3)
-            print "DEBUG: processing request %s %s" % (self.method,self.request_uri)
+            #print "DEBUG: processing request %s %s" % (self.method,self.request_uri)
         # If it's a response, we can at least grab the status code.
-        elif line[0:4] == "SIP/":
+        elif line[0:7] == "SIP/2.0":
             self.is_response = 1
             self.status_code = line[8:11]
             print "DEBUG: processing response with status code %s\n" % self.status_code
@@ -454,7 +470,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         # These are STUN-related keep-alive packets, used to keep a NAT
         # rule from expiring.
 
-        elif line == "" or line[0] == 0x0d:
+        elif False and (line == "" or line[0] == 0x0d):
 
             # Right now, we can't forward these along as we rely on
             # header data to know where to send it.
@@ -469,14 +485,15 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
             s.sendto(out,(desthostname,self.port))
             s.close()
             # TODO: figure out how/whether to port this along.
-
+        else:
+            print "First line was %s" % line
 
         # Store this header and grab the rest.  We understand that this might be a
         # response, rather than a request, but we can use much of the same code, so
         # we call this request_headers...
 
-        print "------SIP-----\n%s\n" % line
-        request_headers = [ ("Request",line) ]
+        print "SIP Method line:\n%s\n" % line
+        request_headers = [ ("Request","%s\r\n" % line) ]
 
         try:
             while True:
@@ -486,7 +503,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
                 header, value = line.split(": ",1)
                 request_headers.append((header,value))
 
-                print "DEBUG: %s: %s" % (header,value.rstrip("\r\n"))
+                #print "DEBUG: %s: %s" % (header,value.rstrip("\r\n"))
                 ml.jjlog.debug("done reading request_headers!\n")
         except:
             ml.jjlog.debug("Probably just finished reading request header")
@@ -509,7 +526,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
                     self.client_headers["via"] = value
 
-                    print "DEBUG: found via header!"
+                    print "DEBUG: found via header! %s" % value.rstrip("\r\n")
 
                     self.found_via = 1
                     if self.found_contact and self.is_request:
@@ -533,7 +550,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
                 # To: <sip:13015554091@216.115.20.24:5060>
 
                 self.client_headers["to"] = value
-                print "DEBUG: found to header!"
+                print "DEBUG: found to header! %s" % value.rstrip("\r\n")
                 # If this is an invite request, let's parse the SIP URI to get both the phone
                 # number dialed, if we can determine that this is going to a POTS phone, and
                 # the host being contacted.
@@ -550,7 +567,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
                 # From: <sip:17470848985@proxy01.sipphone.com>;tag=c68b5a63
                 #
 
-                print "DEBUG: found from header: %s" % value
+                print "DEBUG: found from header: %s" % value.rstrip("\r\n")
                 self.client_headers["from"] = value
 
                 # Log this From sipuri with the SIPURI->IP:Port mapping, so we can handle returned
@@ -593,8 +610,6 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
             if request_data != "":
                 print "DEBUG: Request data follows:\n%s" % request_data
 
-        #ml.jjlog.debug("%s is requesting %s:%s" % (self.client_address[0], desthostname, self.port))
-
         # Run the plug-ins on the request.
         self.current_user, request_headers, request_data = self.doRequest(self.current_user, request_headers, request_data)
         ml.jjlog.developer_log("returned from doRequest")
@@ -616,7 +631,6 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
         for header in request_headers[1:]:
             lvalue = header[0]
-            lvalue = lvalue.capitalize()
             rvalue = header[1]
             #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
             modified_request = "%s%s: %s" % (modified_request,lvalue,rvalue)
@@ -625,7 +639,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
         # Now build and send a packet.
 
-        modified_request = "%s%s" % (modified_request,request_data)
+        modified_request = "%s%s\r\n" % (modified_request,request_data)
 
         #
         # Now determine where this packet is going!
@@ -650,30 +664,40 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
             self.dest_uri = normalize_sip_uri(self.client_headers["from"])
         else:
-            print "Already sent! This was STUN?"
-            
+            #print "Already sent! This was STUN?"
+            exit
+
         # Now, let's see if that URI is in our Respond-via-address table.
         # If not, as would be the case with a registration, use the URI's info.
 
         print "DEBUG: destination URI is %s" % self.dest_uri
+        print "Maybe we need to track which IP:Port we spoke to last and talk to that one."
         if self.dest_uri in Middler_SIP_UDP_Proxy.respond_via_address:
-            (self.dest_hostname,self.dest_port) = Middler_SIP_UDP_Proxy.respond_via_address[self.dest_sipuri]
+            (self.dest_hostname,self.dest_port) = Middler_SIP_UDP_Proxy.respond_via_address[self.dest_uri]
             print "DEBUG: Found dest in respond_via_address table - %s : %d" % (self.dest_hostname,self.dest_port)
 
         else:
-            print "DEBUG: hostname wasn't in table."
-            hostname_start = find(self.dest_uri,"@")+1
-            colon_location = find(self.dest_uri,":",hostname_start)
+            print "DEBUG: %s wasn't in our SIP URI -> IP:Port table." % self.dest_uri
+            # First, if there's a sip:, get past it.
+            post_sip_pos = find(self.dest_uri,"sip:")
+            if post_sip_pos == -1:
+                post_sip = self.dest_uri
+            else:
+                post_sip = self.dest_uri[post_sip_pos+4:]
+                print "Stripped off sip: to get %s" % post_sip
+
+            hostname_start = find(post_sip,"@")+1
+            colon_location = find(post_sip,":",hostname_start)
             if hostname_start == -1:
                 print "Can't find hostname in %s" % self.dest_sipuri
                 self.finish()
             if colon_location == -1:
-                self.dest_hostname = self.dest_uri[hostname_start:]
-                print "DEBUG: Got destination hostname - it was %s" % self.dest_hostname
+                self.dest_hostname = post_sip[hostname_start:]
+                print "DEBUG: Parsed destination hostname - it was %s (%s)" % (self.dest_hostname , gethostbyname(self.dest_hostname))
             else:
-                self.dest_hostname = self.dest_uri[hostname_start:colon_location]
-                self.dest_port = self.dest_uri[colon_location+1:]
-                print "DEBUG: Got destination hostname from method line - it was %s - reaching it on port %s" % (self.dest_hostname,self.dest_port)
+                self.dest_hostname = post_sip[hostname_start:colon_location]
+                self.dest_port = int(post_sip[colon_location+1:])
+                print "DEBUG: Parsed destination hostname from method line - it was %s (%s) - reaching it on port %d" % (self.dest_hostname,gethostbyname(self.dest_hostname),self.dest_port)
 
 
         # Now make sure that we're listening on that port!
@@ -681,20 +705,28 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
             Middler_SIP_UDP_Proxy.udp_ports.append(self.dest_port)
             # Signal somehow that we should launch another proxy?
             ml.jjlog.developer_log("SIP - Note - we haven't implemented dynamically adding ports.")
-            print "We'd better start listening on port %d" % int(self.dest_port)
+            print "We'd better start listening on port %d" % self.dest_port
 
         # For a response, we'll send the packet to the IP address
 
-        print "Sending modified request %s" % modified_request
+        #print "Sending modified request %s" % modified_request
 
         try:
             #ml.jjlog.debug("Connecting SIP to: %s:%d" % (self.dest_hostname,self.dest_port))
 
-            s = socket(AF_INET, SOCK_DGRAM)
-            print "DEBUG: Created new socket - trying to reach %s : %d" % (self.dest_hostname,int(self.dest_port))
-            s.sendto(modified_request,(self.dest_hostname,int(self.dest_port)))
-            s.close()
-            print "DEBUG: Sent message successfully!"
+            #s = socket(AF_INET, SOCK_DGRAM)
+            #s.bind("192.168.0.30",self.source_port)
+
+            #print "DEBUG: Created new socket - trying to reach %s : %d" % (self.dest_hostname,self.dest_port)
+            #s.sendto(modified_request,(self.dest_hostname,self.dest_port))
+            #s.close()
+            #print "DEBUG: Sent message successfully!"
+
+            print "Running scapy - IP from %s to %s , sport %d , dport %d" %  ( self.source_ip,self.dest_hostname,self.source_port,self.dest_port)
+            conf.verb=2
+            spoof_packet=IP(src=self.source_ip,dst=self.dest_hostname)/UDP(sport=self.source_port,dport=self.dest_port)/modified_request
+            send(spoof_packet)
+
 
         except:
             ml.jjlog.debug("Connection failed to host %s" % self.dest_hostname)

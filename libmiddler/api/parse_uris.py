@@ -119,7 +119,7 @@ def parse_sip_uri(sip_uri,only_normalize=0,only_get_caller_id=0):
     # Create a normalized URI and return all of this.
 
     ml.jjlog.developer_log("Split SIP URI %s into SIP id %s and SIP hostname %s on port %s - returning normalized URI %s\n",(sip_uri,sip_id,sip_host,str(sip_port),normalized_uri))
-
+    print("Split SIP URI %s into SIP id %s and SIP hostname %s on port %s - returning normalized URI %s\n",(sip_uri,sip_id,sip_host,str(sip_port),normalized_uri))
     return(caller_id,sip_id,(sip_host,sip_port),normalized_uri)
 
 def normalize_sip_uri(sip_uri,only_normalize=1):
@@ -163,10 +163,10 @@ def modify_caller_id(from_rvalue_sip_uri,new_caller_id="The Middler"):
             caller_id = stripped_uri[1:end_id+1]
             print "caller_id was %s\n" % caller_id
             post_caller_id = stripped_uri[end_id+2:]
-            print "post-caller ID is %s\n" % post_caller_id
+            #print "post-caller ID is %s\n" % post_caller_id
 
             # Change the caller_id
-            new_from_rvalue = ' "%s" %s' % (new_caller_id,post_caller_id)
+            new_from_rvalue = ' "%s" %s' % (new_caller_id,post_caller_id.rstrip("\r\n"))
         else:
             ml.jjlog.debuglog("ERROR - could not find a caller ID string in two quotes in %s" % sip_uri)
             return from_rvalue_sip_uri
