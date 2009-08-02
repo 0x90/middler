@@ -45,6 +45,7 @@ if __name__ == '__main__':
 
     ml.toggle_arpspoof_off = options.toggle_arpspoof_off
     ml.port = int(options.port)
+    ml.http_port = ml.port
 
     ml.hostname = "0.0.0.0"
 

