@@ -177,7 +177,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         for plugin in SIP_PLUGINS:
             try:
                 ml.jjlog.debug("executing plugin %s" % plugin)
-                request_headers, data, changed, stop = plugin.doRequest(session, request_headers, data)
+                request_headers, data, changed, stop = plugin.doRequest(session, request_headers, data, self)
                 if stop:
                     break
             except PluginSaysDontSend, e:
@@ -321,6 +321,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         # Store the source IP and port for the one packet this thread will handle.
         self.source_ip = self.client_address[0]
         self.source_port = int(self.client_address[1])
+        print 'src:', self.source_port, self.client_address[1]
 
         # Store the destination IP and port for our outgoing packet.
         # We don't know what the original dest was, because iptables/ipfw both don't
@@ -647,9 +648,9 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
             rvalue = header[1]
             #print ("%s: %s" % (lvalue,rvalue[0:-1]) )
 
-            if lvalue == "Via":
-                middlers_via_line = "SIP/2.0/UDP %s:%s;branch=middler-3d3g5lt-Kh50\r\n" % ("172.16.175.138",self.source_port)
-                modified_request = "%s%s: %s" % (modified_request,"Via",middlers_via_line)
+            #if lvalue == "Via":
+            #    middlers_via_line = "SIP/2.0/UDP %s:%s;branch=middler-3d3g5lt-Kh50\r\n" % ("208.64.241.83",self.source_port)
+            #    modified_request = "%s%s: %s" % (modified_request,"Via",middlers_via_line)
 
             modified_request = "%s%s: %s" % (modified_request,lvalue,rvalue)
 
@@ -658,7 +659,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
         # Now build and send a packet.
 
         if request_data != "":
-            modified_request = "%s\r\n%s\r\n" % (modified_request,request_data)
+            modified_request = "%s\r\n%s" % (modified_request,request_data)
 
         #
         # Now determine where this packet is going!
@@ -715,7 +716,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
             if self.dest_uri in Middler_SIP_UDP_Proxy.respond_via_address:
 
-                (self.dest_hostname,self.dest_port) = Middler_SIP_UDP_Proxy.respond_via_address[self.dest_uri]
+                (self.dest_hostname,bad_dest_port) = Middler_SIP_UDP_Proxy.respond_via_address[self.dest_uri]
                 print "DEBUG: Found dest in respond_via_address table - %s : %d" % (self.dest_hostname,self.dest_port)
 
         else:
@@ -735,10 +736,17 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
                 self.finish()
             if colon_location == -1:
                 self.dest_hostname = post_sip[hostname_start:]
+                # Strip off any ;nat=true
+                if ';' in self.dest_hostname:
+                    self.dest_hostname = self.dest_hostname[:self.dest_hostname.find(';')]
                 print "DEBUG: Parsed destination hostname - it was %s" % (self.dest_hostname )
             else:
                 self.dest_hostname = post_sip[hostname_start:colon_location]
-                self.dest_port = int(post_sip[colon_location+1:])
+                # To parse port, we need to strip any ;nat=true off the end.
+                tmp_port = post_sip[colon_location+1:]
+                if ';' in tmp_port:
+                    tmp_port = tmp_port[:tmp_port.find(';')]
+                self.dest_port = int(tmp_port)
                 print "DEBUG: Parsed destination hostname from method line - it was %s (%s) - reaching it on port %d" % (self.dest_hostname,gethostbyname(self.dest_hostname),self.dest_port)
 
 
