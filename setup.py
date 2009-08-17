@@ -2,7 +2,8 @@ import sys
 import os
 from distutils.core import setup, Extension
 
-packages = ['middlerlib','middlerlib.plugins','middler.plugins.support']
+#,'libmiddler.plugins.support'
+packages = ['libmiddler','libmiddler.plugins']
 mods = []
 pkgdata = {}
 

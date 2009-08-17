@@ -4,7 +4,8 @@ import libmiddler.api.header as header
 
 
 ### FUNCTION TO MANIPULATE SERVER RESPONSE
-def doRequest(session, request_header, response_header, data):
+#, response_header
+def doRequest(session, request_header, data, e):
     changed = 0
     stop = 0
     i = 1
@@ -17,7 +18,7 @@ def doRequest(session, request_header, response_header, data):
 
 
     # We're only looking for INVITE requests.
-    if not self.is_request:
+    if not e.is_request:
         return(request_header, data, changed, stop)
 
     (method,sipuri,version) = header.headerget(request_header,"Request").split(" ",2)
@@ -35,8 +36,8 @@ def doRequest(session, request_header, response_header, data):
     # If the caller-ID is present, let's change it to another phone number.
     from_rvalue = header.headerget(request_header,"From")
     if from_rvalue != "HeaderNotFound":
-        if self.get_caller_id(from_rvalue) != "":
-            new_from_rvalue = self.modify_caller_id(from_rvalue)
+        if e.get_caller_id(from_rvalue) != "":
+            new_from_rvalue = e.modify_caller_id(from_rvalue)
             ml.api.header.headerfix(request_header,"From",new_from_rvalue)
 
             # We have changed the header and we don't want any other plugins to touch it.

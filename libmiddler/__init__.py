@@ -11,6 +11,10 @@ redirected_tcp_ports = []
 redirected_udp_ports = []
 
 router_ip = ""
+
+# Are we using sudo to run root commands?
+sudo = 0
+
 # IP address we're listening on, defaults to 0.0.0.0
 # hostname
 

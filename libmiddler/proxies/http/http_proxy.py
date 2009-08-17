@@ -289,12 +289,13 @@ class Middler_HTTP_Proxy(SocketServer.StreamRequestHandler):
                 self.finish()
 
             #
+            method = url = HTTPprotocol = ''
             try:
                 method, url, HTTPprotocol = line.split(' ',2)
 
             except ValueError:
                 print ("ERROR: Failure condition while separating out the parts of line by spaces - method was %s, URL was %s, line was:%s\n" % (method,url,line) )
-                exit(1)
+                #exit(1)
 
 
             request_headers = [ ("Request",line) ]

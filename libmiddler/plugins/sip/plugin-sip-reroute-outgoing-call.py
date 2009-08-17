@@ -4,7 +4,7 @@ import libmiddler.api.header as header
 
 
 ### FUNCTION TO MANIPULATE SERVER RESPONSE
-def doRequest(session, request_header, response_header, data):
+def doRequest(session, request_header, data, e):
     changed = 0
     stop = 0
     i = 1
@@ -20,7 +20,7 @@ def doRequest(session, request_header, response_header, data):
 
     # We need to modify the SIP URI in the initial INVITE request, but also in every other request
     # so that both caller and proxy/server maintain state.
-    if self.is_request:
+    if e.is_request:
         (method,sipuri,version) = header.headerget(request_header,"Request").split(" ",2)
 
         if sipuri.find(target):
@@ -46,7 +46,7 @@ def doRequest(session, request_header, response_header, data):
 
     # In a response, we need to switch both the To header back to the real destination
     # and we need to switch the Contact header in the same way.
-    if self.is_response:
+    if e.is_response:
 
         to_rvalue = header.headerget(request_header,"To")
         if to_rvalue.find(reroute_to):
@@ -69,7 +69,7 @@ def doRequest(session, request_header, response_header, data):
 
 
 ### FUNCTION TO MANIPULATE CLIENT REQUEST
-def doResponse(session, request_header, data):
+def doResponse(session, response_header, data):
     changed = 0
     stop = 0
 
