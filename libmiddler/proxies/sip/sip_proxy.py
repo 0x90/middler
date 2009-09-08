@@ -303,7 +303,7 @@ class Middler_SIP_UDP_Proxy(SocketServer.DatagramRequestHandler):
 
             else:
 
-                ml.traffic_capture.set_up_arpspoofing(impersonated_host=internal_address)
+                ml.traffic_capture.arpspoof_a_client(impersonated_host=internal_address)
                 while True:
                     pass
 
