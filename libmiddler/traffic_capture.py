@@ -403,7 +403,7 @@ def arpspoof_a_client(impersonated_host):
 
     # ...and if scapy is unavailable, let's use the arpspoof program.
     if ml.arpspoof_via_scapy == 0:
-        call( ["arpspoof -t %s %s" % (ml.router,impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
+        call( ["arpspoof -t %s %s" % (ml.router_ip,impersonated_host),], shell=True, close_fds=True, stdout=PIPE,stderr=STDOUT)
 
     # Otherwise, let's fork a process and run arpspoof via scapy.
     arpspoof_via_scapy(impersonated_host, ml.router_ip)
